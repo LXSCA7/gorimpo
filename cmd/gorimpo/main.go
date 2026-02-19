@@ -39,7 +39,7 @@ func main() {
 	telegram := notifier.NewTelegram(token, chatID)
 
 	logger.Info("gorimpo started!", slog.String("version", Version))
-	bootMsg := fmt.Sprintf("🟢 <b>GOrimpo v%s</b> iniciado e pronto a garimpar!", Version)
+	bootMsg := fmt.Sprintf("🟢 <b>GOrimpo %s</b> iniciado e pronto para garimpar!", Version)
 	if err := telegram.SendText(bootMsg); err != nil {
 		logger.Error("Erro ao enviar mensagem de boot", "erro", err)
 	}
@@ -70,7 +70,7 @@ func main() {
 
 	sig := <-stopChan
 	logger.Warn("graceful shutdown...", slog.String("signal", sig.String()))
-	shutdownMsg := fmt.Sprintf("🔴 <b>GOrimpo v%s</b> fechando!", Version)
+	shutdownMsg := fmt.Sprintf("🔴 <b>GOrimpo %s</b> fechando!", Version)
 	if err := telegram.SendText(shutdownMsg); err != nil {
 		logger.Error("Erro ao enviar mensagem de boot", "erro", err)
 	}
