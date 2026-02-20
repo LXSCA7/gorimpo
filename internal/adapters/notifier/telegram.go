@@ -4,32 +4,46 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
+	"strconv"
 
 	"github.com/LXSCA7/gorimpo/internal/core/domain"
+	"github.com/LXSCA7/gorimpo/internal/core/ports"
 )
 
+var _ ports.Notifier = (*TelegramAdapter)(nil)
+
 type TelegramAdapter struct {
-	Token  string
-	ChatID string
-	ApiURL string
+	Token   string
+	ChatID  string
+	TopicID int
+	ApiURL  string
 }
 
-func NewTelegram(token, chatID string) *TelegramAdapter {
+func NewTelegram(token, chatID, topicID string) *TelegramAdapter {
+	tid, _ := strconv.Atoi(topicID)
+
 	return &TelegramAdapter{
-		Token:  token,
-		ChatID: chatID,
-		ApiURL: fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", token),
+		Token:   token,
+		ChatID:  chatID,
+		TopicID: tid,
+		ApiURL:  fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", token),
 	}
 }
 
 func (t *TelegramAdapter) SendText(message string) error {
-	payload := map[string]string{
+	payload := map[string]any{
 		"chat_id":    t.ChatID,
 		"text":       message,
 		"parse_mode": "HTML",
 	}
+
+	if t.TopicID > 0 {
+		payload["message_thread_id"] = t.TopicID
+	}
+
 	return t.doRequest(payload)
 }
 
@@ -42,7 +56,7 @@ func (t *TelegramAdapter) Send(offer domain.Offer) error {
 	return t.SendText(msg)
 }
 
-func (t *TelegramAdapter) doRequest(payload map[string]string) error {
+func (t *TelegramAdapter) doRequest(payload map[string]any) error {
 	body, err := json.Marshal(payload)
 	if err != nil {
 		return err
@@ -55,8 +69,10 @@ func (t *TelegramAdapter) doRequest(payload map[string]string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		slog.Error("erro: %s", resp.Body)
-		return fmt.Errorf("erro na api do telegram: status %d", resp.StatusCode)
+		bodyBytes, _ := io.ReadAll(resp.Body)
+
+		slog.Error("erro na api do telegram", "status", resp.StatusCode, "motivo", string(bodyBytes))
+		return fmt.Errorf("erro na api do telegram: status %d - %s", resp.StatusCode, string(bodyBytes))
 	}
 
 	return nil

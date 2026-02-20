@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/LXSCA7/gorimpo/internal/adapters/notifier"
+	"github.com/LXSCA7/gorimpo/internal/adapters/repository"
+	"github.com/LXSCA7/gorimpo/internal/adapters/scraper"
 	"github.com/joho/godotenv"
 	"github.com/lmittmann/tint"
 )
@@ -20,47 +22,100 @@ func main() {
 	logger := slog.New(tint.NewHandler(os.Stdout, &tint.Options{
 		Level:      slog.LevelDebug,
 		TimeFormat: time.TimeOnly,
-		AddSource:  true,
 	}))
 	slog.SetDefault(logger)
 
-	if err := godotenv.Load(); err != nil {
-		logger.Warn("Ficheiro .env não encontrado, a usar variáveis de sistema")
-	}
+	_ = godotenv.Load()
 
 	token := os.Getenv("TELEGRAM_TOKEN")
 	chatID := os.Getenv("TELEGRAM_CHAT_ID")
+	topicID := os.Getenv("TELEGRAM_TOPIC_ID")
 
-	if token == "" || chatID == "" {
-		logger.Error("TELEGRAM_TOKEN ou TELEGRAM_CHAT_ID em falta!")
+	if token == "" || chatID == "" || topicID == "" {
+		logger.Error("missing TELEGRAM_TOKEN, TELEGRAM_CHAT_ID or TELEGRAM_TOPIC_ID")
 		os.Exit(1)
 	}
 
-	telegram := notifier.NewTelegram(token, chatID)
+	telegram := notifier.NewTelegram(token, chatID, topicID)
+	olxScraper := scraper.NewOLX()
+	if err := os.MkdirAll("data", os.ModePerm); err != nil {
+		logger.Error("Erro ao criar pasta data", "erro", err)
+		os.Exit(1)
+	}
 
-	logger.Info("gorimpo started!", slog.String("version", Version))
-	bootMsg := fmt.Sprintf("🟢 <b>GOrimpo %s</b> iniciado e pronto para garimpar!", Version)
-	if err := telegram.SendText(bootMsg); err != nil {
-		logger.Error("Erro ao enviar mensagem de boot", "erro", err)
+	repo, err := repository.NewSQLite("data/gorimpo.db")
+	if err != nil {
+		logger.Error("Erro ao iniciar o banco de dados", "erro", err)
+		os.Exit(1)
+	}
+
+	logger.Info("🚀 GOrimpo starting...", slog.String("version", Version))
+	err = telegram.SendText(fmt.Sprintf("🟢 <b>GOrimpo v%s</b> iniciado e pronto a garimpar!", Version))
+	if err != nil {
+		panic(fmt.Sprintf("erro ao enviar mensagem ao telegram: %v", err))
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	logger.Info("booting")
-
 	go func() {
-		logger.Info("starting search loop")
+		logger.Info("Iniciando rotina de busca...")
 
-		ticker := time.NewTicker(5 * time.Second)
+		garimpar := func() {
+			logger.Debug("⛏️ Abrindo o navegador e cavando na OLX...")
+			ofertas, err := olxScraper.Search("Nintendo Switch")
+			if err != nil {
+				logger.Error("Erro ao garimpar", "erro", err)
+				return
+			}
+
+			logger.Info("💎 Busca concluída!", "encontrados", len(ofertas))
+			novasOfertas := 0
+
+			for _, item := range ofertas {
+
+				existe, err := repo.OfferExists(item.Link)
+				if err != nil {
+					logger.Error("Erro ao consultar o banco", "erro", err)
+					continue
+				}
+
+				if existe {
+					continue
+				}
+
+				// Envia sem limites, MAS...
+				if err := telegram.Send(item); err != nil {
+					logger.Error("Erro ao enviar pro Telegram", "erro", err)
+					time.Sleep(3 * time.Second)
+					continue
+				}
+
+				if err := repo.SaveOffer(item); err != nil {
+					logger.Error("Erro ao salvar oferta no banco", "erro", err)
+				}
+
+				novasOfertas++
+				time.Sleep(3 * time.Second)
+			}
+
+			if novasOfertas > 0 {
+				logger.Info("💎 Novas ofertas enviadas com sucesso!", "quantidade", novasOfertas)
+			} else {
+				logger.Debug("🤷 Nenhuma oferta nova nessa rodada.")
+			}
+		}
+
+		garimpar()
+		ticker := time.NewTicker(30 * time.Second)
 		defer ticker.Stop()
+
 		for {
 			select {
 			case <-ctx.Done():
-				logger.Info("search loop stopped by system")
 				return
-			case t := <-ticker.C:
-				logger.Debug("searching...", slog.Time("tick", t))
+			case <-ticker.C:
+				garimpar()
 			}
 		}
 	}()
@@ -68,15 +123,11 @@ func main() {
 	stopChan := make(chan os.Signal, 1)
 	signal.Notify(stopChan, os.Interrupt, syscall.SIGTERM)
 
-	sig := <-stopChan
-	logger.Warn("graceful shutdown...", slog.String("signal", sig.String()))
-	shutdownMsg := fmt.Sprintf("🔴 <b>GOrimpo %s</b> fechando!", Version)
-	if err := telegram.SendText(shutdownMsg); err != nil {
-		logger.Error("Erro ao enviar mensagem de boot", "erro", err)
-	}
+	<-stopChan
+	logger.Warn("Graceful shutdown iniciado...")
+	telegram.SendText("🔴 <b>GOrimpo</b> desligando. Fui!")
 
 	cancel()
 	time.Sleep(2 * time.Second)
-
-	logger.Info("👋 gorimpo stopped succesfuly. bye!")
+	logger.Info("👋 Sistema encerrado.")
 }
