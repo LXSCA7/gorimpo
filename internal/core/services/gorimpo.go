@@ -19,6 +19,7 @@ type GorimpoService struct {
 	scraper   ports.Scraper
 	offerRepo ports.OfferRepository
 	notifier  ports.Notifier
+	metrics   ports.Metrics
 	config    *config.Config
 }
 
@@ -26,12 +27,14 @@ func NewGorimpoService(
 	s ports.Scraper,
 	or ports.OfferRepository,
 	n ports.Notifier,
+	m ports.Metrics,
 	c *config.Config,
 ) *GorimpoService {
 	return &GorimpoService{
 		scraper:   s,
 		offerRepo: or,
 		notifier:  n,
+		metrics:   m,
 		config:    c,
 	}
 }
@@ -138,6 +141,10 @@ func (g *GorimpoService) processSearch(search config.Search) {
 		newOffersCount++
 		time.Sleep(3 * time.Second)
 	}
+
+	g.metrics.RecordDiscarded(search.Term, "price", discardedByPrice)
+	g.metrics.RecordDiscarded(search.Term, "filter", discardedByFilter)
+	g.metrics.RecordValid(search.Term, len(validOffers))
 
 	if newOffersCount > 0 {
 		slog.Info("💎 Offers sent!", "term", search.Term, "count", newOffersCount)
