@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -41,14 +42,14 @@ func (g *GorimpoService) Start(version string) {
 	}
 	err := g.notifier.SendText(fmt.Sprintf("🟢 <b>GOrimpo %s</b> iniciado e pronto para garimpar!", version), "system")
 	if err != nil {
-		panic(fmt.Sprintf("erro ao enviar mensagem ao telegram: %v", err))
+		panic(fmt.Sprintf("error sending message to telegram: %v", err))
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	go func() {
-		slog.Info("Iniciando rotina de busca...")
+		slog.Info("Starting search routine...")
 		g.runCycle()
 
 		ticker := time.NewTicker(2 * time.Minute)
@@ -68,7 +69,7 @@ func (g *GorimpoService) Start(version string) {
 	signal.Notify(stopChan, os.Interrupt, syscall.SIGTERM)
 
 	<-stopChan
-	slog.Warn("Graceful shutdown iniciado...")
+	slog.Warn("Graceful shutdown initiated...")
 	g.notifier.SendText("🔴 <b>GOrimpo</b> desligando. Fui!", "system")
 
 	cancel()
@@ -76,7 +77,7 @@ func (g *GorimpoService) Start(version string) {
 }
 
 func (g *GorimpoService) runCycle() {
-	slog.Info("⛏️ Iniciando ciclo de garimpo do YAML...")
+	slog.Info("⛏️ Starting YAML parsing cycle...")
 
 	for _, search := range g.config.Searches {
 		g.processSearch(search)
@@ -85,48 +86,78 @@ func (g *GorimpoService) runCycle() {
 }
 
 func (g *GorimpoService) processSearch(search config.Search) {
-	slog.Debug("🔎 Buscando...", "termo", search.Term)
+	slog.Debug("🔎 Searching...", "term", search.Term)
 
-	ofertasBrutas, err := g.scraper.Search(search.Term)
+	rawOffers, err := g.scraper.Search(search.Term)
 	if err != nil {
-		slog.Error("Erro ao garimpar", "termo", search.Term, "erro", err)
+		slog.Error("Error scraping", "term", search.Term, "error", err)
 		return
 	}
 
-	var ofertasValidas []domain.Offer
-	descartadasPreco := 0
+	var validOffers []domain.Offer
+	discardedByPrice := 0
+	discardedByFilter := 0
 
-	for _, item := range ofertasBrutas {
-		if item.Price < search.MinPrice || item.Price > search.MaxPrice {
-			descartadasPreco++
+	for _, offer := range rawOffers {
+		if offer.Price < search.MinPrice || offer.Price > search.MaxPrice {
+			discardedByPrice++
 			continue
 		}
-		ofertasValidas = append(ofertasValidas, item)
+
+		if isExcluded(offer.Title, search.Exclude) {
+			discardedByFilter++
+			continue
+		}
+
+		validOffers = append(validOffers, offer)
 	}
 
-	slog.Info("📊 Resumo", "termo", search.Term, "validas", len(ofertasValidas), "descartadas", descartadasPreco)
+	slog.Info("📊 Summary",
+		"term", search.Term,
+		"valid", len(validOffers),
+		"discarded_price", discardedByPrice,
+		"discarded_filter", discardedByFilter,
+	)
 
-	novasOfertas := 0
-	for _, item := range ofertasValidas {
-		existe, err := g.offerRepo.OfferExists(item.Link)
-		if err != nil || existe {
+	newOffersCount := 0
+	for _, offer := range validOffers {
+		exists, err := g.offerRepo.OfferExists(offer.Link)
+		if err != nil || exists {
 			continue
 		}
 
-		if err := g.notifier.Send(item, search.Category); err != nil {
-			slog.Error("Erro ao enviar pro Telegram", "erro", err)
+		if err := g.notifier.Send(offer, search.Category); err != nil {
+			slog.Error("Error sending to Telegram", "error", err)
 			time.Sleep(3 * time.Second)
 			continue
 		}
 
-		_ = g.offerRepo.SaveOffer(item)
-		novasOfertas++
+		_ = g.offerRepo.SaveOffer(offer)
+		newOffersCount++
 		time.Sleep(3 * time.Second)
 	}
 
-	if novasOfertas > 0 {
-		slog.Info("💎 Ofertas enviadas!", "termo", search.Term, "qtd", novasOfertas)
+	if newOffersCount > 0 {
+		slog.Info("💎 Offers sent!", "term", search.Term, "count", newOffersCount)
 	} else {
-		slog.Debug("🤷 Nenhuma oferta nova.", "termo", search.Term)
+		slog.Debug("🤷 No new offers.", "term", search.Term)
 	}
+}
+
+func isExcluded(title string, excludes []string) bool {
+	if len(excludes) == 0 {
+		return false
+	}
+
+	titleLower := strings.ToLower(title)
+
+	for _, word := range excludes {
+		if word == "" {
+			continue
+		}
+		if strings.Contains(titleLower, strings.ToLower(word)) {
+			return true
+		}
+	}
+	return false
 }
