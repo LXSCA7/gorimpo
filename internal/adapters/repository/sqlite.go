@@ -81,14 +81,23 @@ func (r *SQLiteRepository) SaveOffer(offer domain.Offer) error {
 	return err
 }
 
-func (r *SQLiteRepository) SaveDiscarded(offer domain.Offer, reason string) error {
-	query := `
-	INSERT INTO discarded_offers (link, title, price, source, image_url, reason) 
-	VALUES (?, ?, ?, ?, ?, ?)
-	ON CONFLICT(link) DO NOTHING;`
+func (r *SQLiteRepository) SaveDiscarded(offer domain.Offer, reason string) (bool, error) {
+	query := `INSERT INTO discarded (link, title, price, reason) 
+	VALUES (?, ?, ?, ?) 
+	ON CONFLICT(link) DO NOTHING`
 
-	_, err := r.db.Exec(query, offer.Link, offer.Title, offer.Price, offer.Source, offer.ImageURL, reason)
-	return err
+	result, err := r.db.Exec(query, offer.Link, offer.Title, offer.Price, reason)
+	if err != nil {
+		return false, err
+	}
+
+	// 👇 A mágica acontece aqui!
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+
+	return rows > 0, nil // Retorna true se inseriu, false se ignorou
 }
 
 // system repo:

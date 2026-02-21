@@ -5,7 +5,7 @@ import "github.com/LXSCA7/gorimpo/internal/core/domain"
 type OfferRepository interface {
 	OfferExists(link string) (bool, error)
 	SaveOffer(offer domain.Offer) error
-	SaveDiscarded(offer domain.Offer, reason string) error
+	SaveDiscarded(offer domain.Offer, reason string) (bool, error)
 }
 
 type SystemRepository interface {
