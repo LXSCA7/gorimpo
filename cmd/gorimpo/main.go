@@ -12,6 +12,7 @@ import (
 	"github.com/LXSCA7/gorimpo/internal/adapters/notifier"
 	"github.com/LXSCA7/gorimpo/internal/adapters/repository"
 	"github.com/LXSCA7/gorimpo/internal/adapters/scraper"
+	"github.com/LXSCA7/gorimpo/internal/config"
 	"github.com/joho/godotenv"
 	"github.com/lmittmann/tint"
 )
@@ -24,19 +25,37 @@ func main() {
 		TimeFormat: time.TimeOnly,
 	}))
 	slog.SetDefault(logger)
+	routes := make(map[string]string)
 
+	cfg, err := config.Load("./config.yaml")
+	if err != nil {
+		panic(err)
+	}
+
+	for _, cat := range cfg.Categories {
+		if !cfg.App.UseTopics {
+			routes[cat] = "0"
+		} else {
+			if cat == "nintendo" {
+				routes[cat] = "3"
+			} else {
+				routes[cat] = "0"
+			}
+		}
+	}
 	_ = godotenv.Load()
 
 	token := os.Getenv("TELEGRAM_TOKEN")
 	chatID := os.Getenv("TELEGRAM_CHAT_ID")
-	topicID := os.Getenv("TELEGRAM_TOPIC_ID")
 
-	if token == "" || chatID == "" || topicID == "" {
-		logger.Error("missing TELEGRAM_TOKEN, TELEGRAM_CHAT_ID or TELEGRAM_TOPIC_ID")
+	if token == "" || chatID == "" {
+		logger.Error("missing TELEGRAM_TOKEN or TELEGRAM_CHAT_ID")
 		os.Exit(1)
 	}
 
-	telegram := notifier.NewTelegram(token, chatID, topicID)
+	telegram := notifier.NewTelegram(token, chatID)
+	telegram.SetRoutes(routes)
+
 	olxScraper := scraper.NewOLX()
 	if err := os.MkdirAll("data", os.ModePerm); err != nil {
 		logger.Error("Erro ao criar pasta data", "erro", err)
@@ -50,7 +69,7 @@ func main() {
 	}
 
 	logger.Info("🚀 GOrimpo starting...", slog.String("version", Version))
-	err = telegram.SendText(fmt.Sprintf("🟢 <b>GOrimpo v%s</b> iniciado e pronto a garimpar!", Version))
+	err = telegram.SendText(fmt.Sprintf("🟢 <b>GOrimpo v%s</b> iniciado e pronto a garimpar!", Version), "nintendo")
 	if err != nil {
 		panic(fmt.Sprintf("erro ao enviar mensagem ao telegram: %v", err))
 	}
@@ -84,8 +103,7 @@ func main() {
 					continue
 				}
 
-				// Envia sem limites, MAS...
-				if err := telegram.Send(item); err != nil {
+				if err := telegram.Send(item, "nintendo"); err != nil {
 					logger.Error("Erro ao enviar pro Telegram", "erro", err)
 					time.Sleep(3 * time.Second)
 					continue
@@ -125,7 +143,7 @@ func main() {
 
 	<-stopChan
 	logger.Warn("Graceful shutdown iniciado...")
-	telegram.SendText("🔴 <b>GOrimpo</b> desligando. Fui!")
+	telegram.SendText("🔴 <b>GOrimpo</b> desligando. Fui!", "nintendo")
 
 	cancel()
 	time.Sleep(2 * time.Second)

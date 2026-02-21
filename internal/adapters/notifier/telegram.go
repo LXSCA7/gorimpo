@@ -16,44 +16,47 @@ import (
 var _ ports.Notifier = (*TelegramAdapter)(nil)
 
 type TelegramAdapter struct {
-	Token   string
-	ChatID  string
-	TopicID int
-	ApiURL  string
+	Token  string
+	ChatID string
+	ApiURL string
+	Routes map[string]string
 }
 
-func NewTelegram(token, chatID, topicID string) *TelegramAdapter {
-	tid, _ := strconv.Atoi(topicID)
-
+func NewTelegram(token, chatID string) *TelegramAdapter {
 	return &TelegramAdapter{
-		Token:   token,
-		ChatID:  chatID,
-		TopicID: tid,
-		ApiURL:  fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", token),
+		Token:  token,
+		ChatID: chatID,
+		ApiURL: fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", token),
 	}
 }
 
-func (t *TelegramAdapter) SendText(message string) error {
+func (t *TelegramAdapter) SetRoutes(routes map[string]string) {
+	t.Routes = routes
+}
+
+func (t *TelegramAdapter) SendText(message, category string) error {
 	payload := map[string]any{
 		"chat_id":    t.ChatID,
 		"text":       message,
 		"parse_mode": "HTML",
 	}
 
-	if t.TopicID > 0 {
-		payload["message_thread_id"] = t.TopicID
+	destID := t.Routes[category]
+	if destID != "" && destID != "0" {
+		topicID, _ := strconv.Atoi(destID)
+		payload["message_thread_id"] = topicID
 	}
 
 	return t.doRequest(payload)
 }
 
-func (t *TelegramAdapter) Send(offer domain.Offer) error {
+func (t *TelegramAdapter) Send(offer domain.Offer, category string) error {
 	msg := fmt.Sprintf(
 		"🚨 <b>NOVO ACHADO NO %s!</b>\n\n🎮 <b>%s</b>\n💰 Preço: <b>R$ %.2f</b>\n\n🔗 <a href=\"%s\">Ver Anúncio</a>",
 		offer.Source, offer.Title, offer.Price, offer.Link,
 	)
 
-	return t.SendText(msg)
+	return t.SendText(msg, category)
 }
 
 func (t *TelegramAdapter) doRequest(payload map[string]any) error {
