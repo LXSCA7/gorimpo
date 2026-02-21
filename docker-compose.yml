@@ -6,6 +6,9 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    volumes:
+      - ./data:/app/data
+      - ./config.yaml:/app/config.yaml
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
 
