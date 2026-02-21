@@ -39,7 +39,7 @@ func (g *GorimpoService) Start(version string) {
 	if version == "dev" {
 		version = "vDEV"
 	}
-	err := g.notifier.SendText(fmt.Sprintf("🟢 <b>GOrimpo %s</b> iniciado e pronto a garimpar!", version), "system")
+	err := g.notifier.SendText(fmt.Sprintf("🟢 <b>GOrimpo %s</b> iniciado e pronto para garimpar!", version), "system")
 	if err != nil {
 		panic(fmt.Sprintf("erro ao enviar mensagem ao telegram: %v", err))
 	}
