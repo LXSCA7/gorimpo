@@ -101,11 +101,13 @@ func (g *GorimpoService) processSearch(search config.Search) {
 	for _, offer := range rawOffers {
 		if offer.Price < search.MinPrice || offer.Price > search.MaxPrice {
 			discardedByPrice++
+			_ = g.offerRepo.SaveDiscarded(offer, "price")
 			continue
 		}
 
 		if isExcluded(offer.Title, search.Exclude) {
 			discardedByFilter++
+			_ = g.offerRepo.SaveDiscarded(offer, "filter")
 			continue
 		}
 

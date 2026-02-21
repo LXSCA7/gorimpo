@@ -36,6 +36,21 @@ func NewSQLite(dbPath string) (*SQLiteRepository, error) {
 		return nil, fmt.Errorf("erro ao criar tabela offers: %v", err)
 	}
 
+	createDiscardedTable := `
+	CREATE TABLE IF NOT EXISTS discarded_offers (
+		link TEXT PRIMARY KEY,
+		title TEXT,
+		price REAL,
+		source TEXT,
+		image_url TEXT,
+		reason TEXT,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	);`
+
+	if _, err := db.Exec(createDiscardedTable); err != nil {
+		return nil, fmt.Errorf("erro ao criar tabela discarded_offers: %v", err)
+	}
+
 	queryRoutes := `CREATE TABLE IF NOT EXISTS routes (category TEXT PRIMARY KEY, dest_id TEXT);`
 	if _, err := db.Exec(queryRoutes); err != nil {
 		return nil, fmt.Errorf("erro ao criar tabela routes: %v", err)
@@ -63,6 +78,16 @@ func (r *SQLiteRepository) SaveOffer(offer domain.Offer) error {
 	VALUES (?, ?, ?, ?, ?)`
 
 	_, err := r.db.Exec(query, offer.Link, offer.Title, offer.Price, offer.Source, offer.ImageURL)
+	return err
+}
+
+func (r *SQLiteRepository) SaveDiscarded(offer domain.Offer, reason string) error {
+	query := `
+	INSERT INTO discarded_offers (link, title, price, source, image_url, reason) 
+	VALUES (?, ?, ?, ?, ?, ?)
+	ON CONFLICT(link) DO NOTHING;`
+
+	_, err := r.db.Exec(query, offer.Link, offer.Title, offer.Price, offer.Source, offer.ImageURL, reason)
 	return err
 }
 
