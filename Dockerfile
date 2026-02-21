@@ -13,15 +13,17 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
     -ldflags "-X main.Version=${APP_VERSION}" \
     -o /bin/gorimpo ./cmd/gorimpo/main.go
 
+RUN go build -o /bin/playwright-cli github.com/playwright-community/playwright-go/cmd/playwright
+
 FROM ubuntu:jammy
 
-RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y ca-certificates curl unzip && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 COPY --from=builder /bin/gorimpo .
+COPY --from=builder /bin/playwright-cli .
 
-# future: playwright
-# RUN ./gorimpo install-browsers
+RUN ./playwright-cli install --with-deps chromium
 
 CMD ["./gorimpo"]
