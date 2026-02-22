@@ -55,7 +55,7 @@ func (o *OLXAdapter) Search(term string) ([]domain.Offer, error) {
 	}
 
 	buscaStr := url.QueryEscape(term)
-	targetURL := fmt.Sprintf("https://www.olx.com.br/brasil?q=%s", buscaStr)
+	targetURL := fmt.Sprintf("https://www.olx.com.br/brasil?q=%s&sf=1", buscaStr)
 
 	slog.Info(fmt.Sprintf("🕵️  Acessando a OLX: %s\n", targetURL))
 
