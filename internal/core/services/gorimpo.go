@@ -97,6 +97,7 @@ func (g *GorimpoService) processSearch(search config.Search) {
 		slog.Error("Error scraping", "term", search.Term, "error", err)
 		return
 	}
+	g.metrics.RecordScraped(search.Term, len(rawOffers))
 
 	var validOffers []domain.Offer
 	discardedByPrice := 0
@@ -159,6 +160,7 @@ func (g *GorimpoService) processSearch(search config.Search) {
 	g.metrics.RecordDiscarded(search.Term, "price", discardedByPrice)
 	g.metrics.RecordDiscarded(search.Term, "filter", discardedByFilter)
 	g.metrics.RecordValid(search.Term, len(validOffers))
+	g.metrics.RecordSent(search.Term, newOffersCount)
 
 	if newOffersCount > 0 {
 		slog.Info("💎 Offers sent!", "term", search.Term, "count", newOffersCount)

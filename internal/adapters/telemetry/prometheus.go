@@ -10,8 +10,10 @@ import (
 var _ ports.Metrics = (*PrometheusMetrics)(nil)
 
 type PrometheusMetrics struct {
-	discarded *prometheus.CounterVec
-	valid     *prometheus.CounterVec
+	discarded    *prometheus.CounterVec
+	valid        *prometheus.CounterVec
+	scrapedTotal *prometheus.CounterVec
+	sentTotal    *prometheus.CounterVec
 }
 
 func NewPrometheusMetrics() *PrometheusMetrics {
@@ -25,6 +27,20 @@ func NewPrometheusMetrics() *PrometheusMetrics {
 			Name: "gorimpo_valid_total",
 			Help: "Total de ofertas validas encontradas por termo",
 		}, []string{"term"}),
+
+		scrapedTotal: promauto.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "gorimpo_scraped_total",
+				Help: "Total bruto de itens raspados da plataforma",
+			},
+			[]string{"term"}),
+
+		sentTotal: promauto.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "gorimpo_sent_total",
+				Help: "Total de ofertas enviadas com sucesso pro Telegram",
+			},
+			[]string{"term"}),
 	}
 }
 
@@ -34,4 +50,12 @@ func (p *PrometheusMetrics) RecordDiscarded(term, reason string, count int) {
 
 func (p *PrometheusMetrics) RecordValid(term string, count int) {
 	p.valid.WithLabelValues(term).Add(float64(count))
+}
+
+func (p *PrometheusMetrics) RecordScraped(term string, count int) {
+	p.scrapedTotal.WithLabelValues(term).Add(float64(count))
+}
+
+func (p *PrometheusMetrics) RecordSent(term string, count int) {
+	p.sentTotal.WithLabelValues(term).Add(float64(count))
 }

@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/LXSCA7/gorimpo/internal/core/domain"
 	"github.com/LXSCA7/gorimpo/internal/core/ports"
@@ -115,12 +116,29 @@ func (t *TelegramAdapter) doRequest(payload map[string]any) error {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-
-		slog.Error("erro na api do telegram", "status", resp.StatusCode, "motivo", string(bodyBytes))
-		return fmt.Errorf("erro na api do telegram: status %d - %s", resp.StatusCode, string(bodyBytes))
+	if resp.StatusCode == http.StatusOK {
+		return nil
 	}
 
-	return nil
+	bodyBytes, _ := io.ReadAll(resp.Body)
+
+	if resp.StatusCode == http.StatusTooManyRequests {
+		var telegramErr struct {
+			Parameters struct {
+				RetryAfter int `json:"retry_after"`
+			} `json:"parameters"`
+		}
+
+		if err := json.Unmarshal(bodyBytes, &telegramErr); err == nil && telegramErr.Parameters.RetryAfter > 0 {
+			sleepTime := telegramErr.Parameters.RetryAfter
+
+			slog.Warn("🚨 Telegram mandou a gente segurar (Erro 429).", "sleeping_seconds", sleepTime)
+			time.Sleep(time.Duration(sleepTime) * time.Second)
+
+			return t.doRequest(payload)
+		}
+	}
+
+	slog.Error("Erro na API do Telegram", "status", resp.StatusCode, "motivo", string(bodyBytes))
+	return fmt.Errorf("erro na api do telegram: status %d - %s", resp.StatusCode, string(bodyBytes))
 }
