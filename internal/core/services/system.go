@@ -3,6 +3,7 @@ package services
 import (
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/LXSCA7/gorimpo/internal/core/ports"
 )
@@ -22,9 +23,17 @@ func NewSystemService(r ports.SystemRepository, n ports.Notifier, c ports.Config
 }
 
 func (s *SystemService) Setup(currentVersion string) map[string]string {
-	routes := s.setupRoutes()
+	routes, newTopics := s.setupRoutes()
 	s.notifier.SetRoutes(routes)
 	s.checkVersion(currentVersion)
+	if len(newTopics) > 0 {
+		var msg strings.Builder
+		msg.WriteString("<b>✨ Novos tópicos configurados:</b>\n")
+		for _, cat := range newTopics {
+			fmt.Fprintf(&msg, "• <code>%s</code>\n", cat)
+		}
+		_ = s.notifier.SendText(msg.String(), "system")
+	}
 	return routes
 }
 
@@ -46,10 +55,11 @@ func (s *SystemService) checkVersion(currentVersion string) {
 	_ = s.repo.SetCurrentVersion(currentVersion)
 }
 
-func (s *SystemService) setupRoutes() map[string]string {
+func (s *SystemService) setupRoutes() (map[string]string, []string) {
 	config := s.configManager.Get()
 	slog.Info("🗺️ Configurando rotas do sistema...")
 	routes := make(map[string]string)
+	newTopics := []string{}
 
 	cats := []string{"system"}
 	cats = append(cats, config.Categories...)
@@ -69,11 +79,12 @@ func (s *SystemService) setupRoutes() map[string]string {
 				newID = "0"
 			} else {
 				_ = s.repo.SaveRoute(cat, newID)
+				newTopics = append(newTopics, cat)
 			}
 			destID = newID
 		}
 		routes[cat] = destID
 	}
 
-	return routes
+	return routes, newTopics
 }
