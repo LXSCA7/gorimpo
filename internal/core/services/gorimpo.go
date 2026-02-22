@@ -101,12 +101,15 @@ func (g *GorimpoService) processSearch(search config.Search) {
 	var validOffers []domain.Offer
 	discardedByPrice := 0
 	discardedByFilter := 0
+	duplicated := 0
 
 	for _, offer := range rawOffers {
-		if offer.Price < search.MinPrice || offer.Price > search.MaxPrice {
+		if offer.Price < search.MinPrice || (search.MaxPrice > 0 && offer.Price > search.MaxPrice) {
 			isNew, _ := g.offerRepo.SaveDiscarded(offer, "price")
 			if isNew {
 				discardedByPrice++
+			} else {
+				duplicated++
 			}
 			continue
 		}
@@ -115,6 +118,8 @@ func (g *GorimpoService) processSearch(search config.Search) {
 			isNew, _ := g.offerRepo.SaveDiscarded(offer, "filter")
 			if isNew {
 				discardedByFilter++
+			} else {
+				duplicated++
 			}
 			continue
 		}
@@ -124,15 +129,19 @@ func (g *GorimpoService) processSearch(search config.Search) {
 
 	slog.Info("📊 Summary",
 		"term", search.Term,
-		"valid", len(validOffers),
-		"discarded_price", discardedByPrice,
-		"discarded_filter", discardedByFilter,
+		"valid_total", len(validOffers),
+		"discarded_price_new", discardedByPrice,
+		"discarded_filter_new", discardedByFilter,
+		"discarded_duplicated", duplicated,
 	)
 
 	newOffersCount := 0
+	validDuplicated := 0
+
 	for _, offer := range validOffers {
 		exists, err := g.offerRepo.OfferExists(offer.Link)
 		if err != nil || exists {
+			validDuplicated++
 			continue
 		}
 
@@ -154,7 +163,7 @@ func (g *GorimpoService) processSearch(search config.Search) {
 	if newOffersCount > 0 {
 		slog.Info("💎 Offers sent!", "term", search.Term, "count", newOffersCount)
 	} else {
-		slog.Debug("🤷 No new offers.", "term", search.Term)
+		slog.Debug("🤷 No new offers.", "term", search.Term, "valid_duplicated", validDuplicated)
 	}
 }
 
