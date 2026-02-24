@@ -7,37 +7,22 @@ import (
 	"sync"
 	"time"
 
+	"github.com/LXSCA7/gorimpo/internal/core/domain"
+	"github.com/LXSCA7/gorimpo/internal/core/ports"
 	"gopkg.in/yaml.v3"
 )
 
-type AppSettings struct {
-	DefaultNotifier string `yaml:"default_notifier"`
-	UseTopics       bool   `yaml:"use_topics"`
-}
-
-type Search struct {
-	Term     string   `yaml:"term"`
-	MinPrice float64  `yaml:"min_price"`
-	MaxPrice float64  `yaml:"max_price"`
-	Category string   `yaml:"category"`
-	Exclude  []string `yaml:"exclude"`
-}
-
-type Config struct {
-	App        AppSettings `yaml:"app"`
-	Categories []string    `yaml:"categories"`
-	Searches   []Search    `yaml:"searches"`
-}
-
 type ConfigManager struct {
 	mu       sync.RWMutex
-	config   *Config
+	config   *domain.Config
 	filepath string
 	lastMod  time.Time
 	OnReload func(added, removed []string)
 }
 
-// var _ ports.ConfigManager = (*ConfigManager)(nil)
+var _ ports.ConfigProvider = (*ConfigManager)(nil)
+var _ ports.ConfigWatcher = (*ConfigManager)(nil)
+var _ ports.ConfigManager = (*ConfigManager)(nil)
 
 func NewConfigManager(path string) (*ConfigManager, error) {
 	cfg, err := Load(path)
@@ -54,7 +39,7 @@ func NewConfigManager(path string) (*ConfigManager, error) {
 	}, nil
 }
 
-func (c *ConfigManager) Get() *Config {
+func (c *ConfigManager) Get() *domain.Config {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.config
@@ -121,13 +106,13 @@ func (c *ConfigManager) loadAndCompare(newModTime time.Time) {
 	c.lastMod = newModTime
 }
 
-func Load(filepath string) (*Config, error) {
+func Load(filepath string) (*domain.Config, error) {
 	file, err := os.ReadFile(filepath)
 	if err != nil {
 		return nil, fmt.Errorf("erro ao ler o arquivo: %v", err)
 	}
 
-	var cfg Config
+	var cfg domain.Config
 	if err := yaml.Unmarshal(file, &cfg); err != nil {
 		return nil, fmt.Errorf("erro no parse do yaml: %v", err)
 	}

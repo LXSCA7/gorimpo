@@ -7,11 +7,11 @@ import (
 	"os"
 	"time"
 
+	"github.com/LXSCA7/gorimpo/internal/adapters/config"
 	"github.com/LXSCA7/gorimpo/internal/adapters/notifier"
 	"github.com/LXSCA7/gorimpo/internal/adapters/repository"
 	"github.com/LXSCA7/gorimpo/internal/adapters/scraper"
 	"github.com/LXSCA7/gorimpo/internal/adapters/telemetry"
-	"github.com/LXSCA7/gorimpo/internal/config"
 	"github.com/LXSCA7/gorimpo/internal/core/services"
 	"github.com/joho/godotenv"
 	"github.com/lmittmann/tint"

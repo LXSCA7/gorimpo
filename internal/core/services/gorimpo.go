@@ -10,17 +10,16 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/LXSCA7/gorimpo/internal/config"
 	"github.com/LXSCA7/gorimpo/internal/core/domain"
 	"github.com/LXSCA7/gorimpo/internal/core/ports"
 )
 
 type GorimpoService struct {
-	scraper       ports.Scraper
-	offerRepo     ports.OfferRepository
-	notifier      ports.Notifier
-	metrics       ports.Metrics
-	configManager ports.ConfigManager
+	scraper   ports.Scraper
+	offerRepo ports.OfferRepository
+	notifier  ports.Notifier
+	metrics   ports.Metrics
+	config    ports.ConfigProvider
 }
 
 func NewGorimpoService(
@@ -28,14 +27,14 @@ func NewGorimpoService(
 	or ports.OfferRepository,
 	n ports.Notifier,
 	m ports.Metrics,
-	c ports.ConfigManager,
+	c ports.ConfigProvider,
 ) *GorimpoService {
 	return &GorimpoService{
-		scraper:       s,
-		offerRepo:     or,
-		notifier:      n,
-		metrics:       m,
-		configManager: c,
+		scraper:   s,
+		offerRepo: or,
+		notifier:  n,
+		metrics:   m,
+		config:    c,
 	}
 }
 
@@ -82,14 +81,14 @@ func (g *GorimpoService) Start(version string) {
 func (g *GorimpoService) runCycle() {
 	slog.Info("⛏️ Starting YAML parsing cycle...")
 
-	config := g.configManager.Get()
+	config := g.config.Get()
 	for _, search := range config.Searches {
 		g.processSearch(search)
 		time.Sleep(2 * time.Second)
 	}
 }
 
-func (g *GorimpoService) processSearch(search config.Search) {
+func (g *GorimpoService) processSearch(search domain.Search) {
 	slog.Debug("🔎 Searching...", "term", search.Term)
 
 	rawOffers, err := g.scraper.Search(search.Term)
