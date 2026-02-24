@@ -13,8 +13,15 @@ type Search struct {
 	Exclude  []string `yaml:"exclude"`
 }
 
+type ScraperSettings struct {
+	MinJitter  int      `yaml:"min_jitter"`
+	MaxJitter  int      `yaml:"max_jitter"`
+	UserAgents []string `yaml:"user_agents"`
+}
+
 type Config struct {
-	App        AppSettings `yaml:"app"`
-	Categories []string    `yaml:"categories"`
-	Searches   []Search    `yaml:"searches"`
+	App        AppSettings     `yaml:"app"`
+	Scraper    ScraperSettings `yaml:"scraper"`
+	Categories []string        `yaml:"categories"`
+	Searches   []Search        `yaml:"searches"`
 }

@@ -50,7 +50,7 @@ func main() {
 	}
 
 	telegram := notifier.NewTelegram(token, chatID)
-	olxScraper := scraper.NewOLX(Version != "dev")
+	olxScraper := scraper.NewOLX(Version != "dev", cfg)
 
 	cfg.OnReload = func(added, removed []string) {
 		msg := "🔥 <b>Hot Reload: Buscas Atualizadas!</b>\n\n"
