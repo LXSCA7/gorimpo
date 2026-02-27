@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math/rand/v2"
 	"os"
 	"os/signal"
 	"strings"
@@ -20,6 +21,10 @@ type GorimpoService struct {
 	notifier  ports.Notifier
 	metrics   ports.Metrics
 	config    ports.ConfigProvider
+
+	consecutiveErrors int
+	circuitOpenUntil  time.Time
+	cycleCount        int
 }
 
 func NewGorimpoService(
@@ -83,8 +88,22 @@ func (g *GorimpoService) runCycle() {
 
 	config := g.config.Get()
 	for _, search := range config.Searches {
+		if time.Now().Before(g.circuitOpenUntil) {
+			slog.Warn("🚧 Circuit Breaker ATIVADO. Pulando ciclo para evitar ban...",
+				"volto_em", time.Until(g.circuitOpenUntil).Round(time.Second))
+			return
+		}
 		g.processSearch(search)
 		time.Sleep(2 * time.Second)
+	}
+
+	g.cycleCount++
+	if g.cycleCount >= 50 {
+		minutes := 5 + rand.IntN(4)
+		slog.Info("♻️  Reciclagem atingida.", "descanso_minutos", minutes)
+
+		g.cycleCount = 0
+		time.Sleep(time.Duration(minutes) * time.Minute)
 	}
 }
 
@@ -93,7 +112,20 @@ func (g *GorimpoService) processSearch(search domain.Search) {
 
 	rawOffers, err := g.scraper.Search(search.Term)
 	if err != nil {
+		g.consecutiveErrors++
 		slog.Error("Error scraping", "term", search.Term, "error", err)
+
+		if g.consecutiveErrors >= 3 {
+			cooldown := 15 * time.Minute
+			g.circuitOpenUntil = time.Now().Add(cooldown)
+			g.consecutiveErrors = 0
+
+			msg := fmt.Sprintf("🚧 <b>CIRCUIT BREAKER ATIVADO!</b>\n3 falhas seguidas. Entrando em cooldown de %v.", cooldown)
+			slog.Warn("🚧 Circuit Breaker ATIVADO. Aplicando descanso...", "circuit_breaker_cooldown", cooldown)
+
+			g.notifier.SendText(msg, "system")
+		}
+
 		if visual, ok := g.scraper.(ports.VisualScraper); ok {
 			if img := visual.GetLastScreenshot(); img != nil {
 				g.notifier.SendPhoto(img, "📸 Erro ao buscar: "+search.Term, "system")
