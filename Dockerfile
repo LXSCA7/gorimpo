@@ -24,6 +24,6 @@ WORKDIR /app
 COPY --from=builder /bin/gorimpo .
 COPY --from=builder /bin/playwright-cli .
 
-RUN ./playwright-cli install --with-deps chromium
+RUN ./playwright-cli install --with-deps chromium firefox webkit
 
 CMD ["./gorimpo"]

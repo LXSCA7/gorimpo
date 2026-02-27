@@ -17,13 +17,15 @@ import (
 type OLXAdapter struct {
 	isHeadless     bool
 	config         ports.ConfigProvider
+	identityGen    ports.IdentityGenerator
 	lastScreenshot []byte
 }
 
-func NewOLX(isHeadless bool, cfg ports.ConfigProvider) *OLXAdapter {
+func NewOLX(isHeadless bool, cfg ports.ConfigProvider, idGen ports.IdentityGenerator) *OLXAdapter {
 	return &OLXAdapter{
-		isHeadless: isHeadless,
-		config:     cfg,
+		isHeadless:  isHeadless,
+		config:      cfg,
+		identityGen: idGen,
 	}
 }
 
@@ -41,7 +43,7 @@ func parsePrice(p string) float64 {
 func (o *OLXAdapter) Search(term string) ([]domain.Offer, error) {
 	scraperCfg := o.config.Get().Scraper
 	o.applyJitter(scraperCfg)
-	userAgent := o.getUserAgent(scraperCfg)
+	userAgent := o.getUserAgent()
 	page, cleanup, err := o.setupBrowser(userAgent)
 	if err != nil {
 		return nil, err
@@ -129,12 +131,8 @@ func (o *OLXAdapter) saveLastScreenshot(page playwright.Page) {
 	o.lastScreenshot = img
 }
 
-func (o *OLXAdapter) getUserAgent(scraperCfg domain.ScraperSettings) string {
-	userAgent := "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" // Fallback seguro
-	if len(scraperCfg.UserAgents) > 0 {
-		userAgent = scraperCfg.UserAgents[rand.IntN(len(scraperCfg.UserAgents))]
-	}
-	slog.Debug("🕵️‍♂️ User-Agent", "ua", userAgent)
+func (o *OLXAdapter) getUserAgent() domain.UserAgent {
+	userAgent := o.identityGen.GetRandom()
 	return userAgent
 }
 
@@ -147,26 +145,38 @@ func (o *OLXAdapter) applyJitter(scraperCfg domain.ScraperSettings) {
 
 }
 
-func (o *OLXAdapter) setupBrowser(userAgent string) (playwright.Page, func(), error) {
+func (o *OLXAdapter) setupBrowser(userAgent domain.UserAgent) (playwright.Page, func(), error) {
 	pw, err := playwright.Run(&playwright.RunOptions{})
 
 	if err != nil {
 		return nil, nil, fmt.Errorf("não foi possível iniciar o playwright: %v", err)
 	}
 
-	browser, err := pw.Chromium.Launch(playwright.BrowserTypeLaunchOptions{
+	var browser playwright.Browser
+	launchOptions := playwright.BrowserTypeLaunchOptions{
 		Headless: playwright.Bool(o.isHeadless),
-		Args: []string{
-			"--disable-blink-features=AutomationControlled",
-		},
-	})
+		Args:     []string{"--disable-blink-features=AutomationControlled"},
+	}
+
+	switch userAgent.Browser {
+	case "chromium":
+		browser, err = pw.Chromium.Launch(launchOptions)
+		slog.Info("🦊  UserAgent selecionado", "user_agent", userAgent.UserAgent)
+	case "firefox":
+		browser, err = pw.Firefox.Launch(launchOptions)
+		slog.Info("🌐  UserAgent selecionado", "user_agent", userAgent.UserAgent)
+	default:
+		browser, err = pw.WebKit.Launch(launchOptions)
+		slog.Info("🧭  UserAgent selecionado", "user_agent", userAgent.UserAgent)
+	}
+
 	if err != nil {
 		pw.Stop()
 		return nil, nil, fmt.Errorf("não foi possível lançar o browser: %v", err)
 	}
 
 	browserContext, err := browser.NewContext(playwright.BrowserNewContextOptions{
-		UserAgent: playwright.String(userAgent),
+		UserAgent: playwright.String(userAgent.UserAgent),
 		ExtraHttpHeaders: map[string]string{
 			"Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
 			"Connection":      "keep-alive",

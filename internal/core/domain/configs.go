@@ -15,9 +15,9 @@ type Search struct {
 }
 
 type ScraperSettings struct {
-	MinJitter  int      `yaml:"min_jitter"`
-	MaxJitter  int      `yaml:"max_jitter"`
-	UserAgents []string `yaml:"user_agents"`
+	MinJitter      int `yaml:"min_jitter"`
+	MaxJitter      int `yaml:"max_jitter"`
+	UserAgentCount int `yaml:"user_agent_count"`
 }
 
 type Config struct {

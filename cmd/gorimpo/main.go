@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/LXSCA7/gorimpo/internal/adapters/config"
+	"github.com/LXSCA7/gorimpo/internal/adapters/infrastructure"
 	"github.com/LXSCA7/gorimpo/internal/adapters/notifier"
 	"github.com/LXSCA7/gorimpo/internal/adapters/repository"
 	"github.com/LXSCA7/gorimpo/internal/adapters/scraper"
@@ -57,8 +58,9 @@ func main() {
 		os.Exit(1)
 	}
 
+	idGen := infrastructure.NewRandomUAFactory(cfg.Get().Scraper.UserAgentCount)
 	telegram := notifier.NewTelegram(token, chatID)
-	olxScraper := scraper.NewOLX(Version != "dev", cfg)
+	olxScraper := scraper.NewOLX(Version != "dev", cfg, idGen)
 
 	cfg.OnReload = func(added, removed []string) {
 		msg := "🔥 <b>Hot Reload: Buscas Atualizadas!</b>\n\n"
