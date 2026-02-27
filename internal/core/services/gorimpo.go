@@ -94,6 +94,11 @@ func (g *GorimpoService) processSearch(search domain.Search) {
 	rawOffers, err := g.scraper.Search(search.Term)
 	if err != nil {
 		slog.Error("Error scraping", "term", search.Term, "error", err)
+		if visual, ok := g.scraper.(ports.VisualScraper); ok {
+			if img := visual.GetLastScreenshot(); img != nil {
+				g.notifier.SendPhoto(img, "📸 Erro ao buscar: "+search.Term, "system")
+			}
+		}
 		return
 	}
 	g.metrics.RecordScraped(search.Term, len(rawOffers))

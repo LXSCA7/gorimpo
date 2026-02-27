@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"mime/multipart"
 	"net/http"
 	"strconv"
 	"time"
@@ -63,6 +64,50 @@ func (t *TelegramAdapter) Send(offer domain.Offer, category, searchTerm string, 
 	)
 
 	return t.SendText(msg, category)
+}
+
+func (t *TelegramAdapter) SendPhoto(data []byte, caption string, category string) error {
+	var b bytes.Buffer
+	w := multipart.NewWriter(&b)
+
+	destID := t.ChatID
+	threadID := t.Routes[category]
+
+	_ = w.WriteField("chat_id", destID)
+	if threadID != "" && threadID != "0" {
+		_ = w.WriteField("message_thread_id", threadID)
+	}
+	_ = w.WriteField("caption", caption)
+	_ = w.WriteField("parse_mode", "HTML")
+
+	fw, err := w.CreateFormFile("photo", "screenshot.jpg")
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(fw, bytes.NewReader(data)); err != nil {
+		return err
+	}
+	w.Close()
+
+	apiURL := fmt.Sprintf("https://api.telegram.org/bot%s/sendPhoto", t.Token)
+	req, err := http.NewRequest("POST", apiURL, &b)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", w.FormDataContentType())
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("telegram error: %d", resp.StatusCode)
+	}
+
+	return nil
 }
 
 func (t *TelegramAdapter) CreateCategory(name string) (string, error) {

@@ -15,8 +15,9 @@ import (
 )
 
 type OLXAdapter struct {
-	isHeadless bool
-	config     ports.ConfigProvider
+	isHeadless     bool
+	config         ports.ConfigProvider
+	lastScreenshot []byte
 }
 
 func NewOLX(isHeadless bool, cfg ports.ConfigProvider) *OLXAdapter {
@@ -26,7 +27,7 @@ func NewOLX(isHeadless bool, cfg ports.ConfigProvider) *OLXAdapter {
 	}
 }
 
-var _ ports.Scraper = (*OLXAdapter)(nil)
+var _ ports.VisualScraper = (*OLXAdapter)(nil)
 
 func parsePrice(p string) float64 {
 	p = strings.ReplaceAll(p, "R$", "")
@@ -67,6 +68,7 @@ func (o *OLXAdapter) Search(term string) ([]domain.Offer, error) {
 		Timeout: playwright.Float(10000),
 	})
 	if err != nil {
+		o.saveLastScreenshot(page)
 		return nil, fmt.Errorf("anúncios reais não renderizaram: %v", err)
 	}
 
@@ -113,6 +115,18 @@ func (o *OLXAdapter) Search(term string) ([]domain.Offer, error) {
 	}
 
 	return ofertas, nil
+}
+
+func (o *OLXAdapter) GetLastScreenshot() []byte {
+	return o.lastScreenshot
+}
+
+func (o *OLXAdapter) saveLastScreenshot(page playwright.Page) {
+	img, _ := page.Screenshot(playwright.PageScreenshotOptions{
+		Type:    playwright.ScreenshotTypeJpeg,
+		Quality: playwright.Int(80),
+	})
+	o.lastScreenshot = img
 }
 
 func (o *OLXAdapter) getUserAgent(scraperCfg domain.ScraperSettings) string {
