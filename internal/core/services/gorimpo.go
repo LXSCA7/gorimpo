@@ -155,7 +155,7 @@ func (g *GorimpoService) processSearch(search domain.Search) {
 	irrelevantFeatured := 0
 
 	for _, offer := range rawOffers {
-		if offer.IsFeatured && !strings.Contains(offer.Title, search.Term) {
+		if offer.IsFeatured && !g.contains(offer.Title, search.Term) {
 			irrelevantFeatured++
 			slog.Debug("🚫 Ignorando destaque irrelevante", "title", offer.Title)
 			continue
@@ -248,4 +248,8 @@ func isExcluded(title string, excludes []string) bool {
 		}
 	}
 	return false
+}
+
+func (g *GorimpoService) contains(str, word string) bool {
+	return strings.Contains(strings.ToLower(str), strings.ToLower(word))
 }
