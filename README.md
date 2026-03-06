@@ -99,6 +99,8 @@ git clone https://github.com/LXSCA7/gorimpo.git
 # Configure your environment variables (.env)
 TELEGRAM_TOKEN=your_token
 TELEGRAM_CHAT_ID=your_chat_id
+GOTIFY_HOST=your_host
+GOTIFY_TOKEN=your_gotify_token
 
 # Start the container
 docker-compose up -d
@@ -109,7 +111,7 @@ Search intelligence is entirely controlled via `config.yaml`. Example:
 
 ```yaml
 app:
-  default_notifier: "telegram"
+  default_notifier: "telegram" # options: gotify, telegram
   use_topics: true # define if telegram will use topics
 
 categories: 
