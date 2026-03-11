@@ -2,7 +2,7 @@ package domain
 
 type AppSettings struct {
 	DefaultNotifier string `yaml:"default_notifier"`
-	UseTopics       bool   `yaml:"use_topics"`
+	UseTopics       *bool  `yaml:"use_topics"`
 }
 
 type Search struct {

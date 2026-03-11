@@ -56,34 +56,37 @@ func (s *SystemService) checkVersion(currentVersion string) {
 }
 
 func (s *SystemService) setupRoutes() (map[string]string, []string) {
-	config := s.configManager.Get()
-	slog.Info("🗺️ Configurando rotas do sistema...")
 	routes := make(map[string]string)
 	newTopics := []string{}
+	config := s.configManager.Get()
 
-	cats := []string{"system"}
-	cats = append(cats, config.Categories...)
-	for _, cat := range cats {
-		if !config.App.UseTopics {
-			routes[cat] = "0"
+	useTelegramTopics := (strings.EqualFold(config.App.DefaultNotifier, "telegram") && (config.App.UseTopics != nil && *config.App.UseTopics))
+
+	slog.Info("🗺️ Configurando rotas de notificação por categoria...")
+
+	categories := []string{"system"}
+	categories = append(categories, config.Categories...)
+	for _, category := range categories {
+		if !useTelegramTopics {
+			routes[category] = "0"
 			continue
 		}
 
-		destID := s.repo.GetRoute(cat)
+		destID := s.repo.GetRoute(category)
 		if destID == "" {
-			slog.Info("✨ Criando novo tópico no Telegram...", "categoria", cat)
+			slog.Info("✨ Criando novo tópico no Telegram...", "categoria", category)
 
-			newID, err := s.notifier.CreateCategory(cat)
+			newID, err := s.notifier.CreateCategory(category)
 			if err != nil {
 				slog.Error("Erro ao criar tópico, jogando pro Geral", "erro", err)
 				newID = "0"
 			} else {
-				_ = s.repo.SaveRoute(cat, newID)
-				newTopics = append(newTopics, cat)
+				_ = s.repo.SaveRoute(category, newID)
+				newTopics = append(newTopics, category)
 			}
 			destID = newID
 		}
-		routes[cat] = destID
+		routes[category] = destID
 	}
 
 	return routes, newTopics

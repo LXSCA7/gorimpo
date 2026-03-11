@@ -50,7 +50,7 @@ func (g *GorimpoService) Start(version string) {
 	}
 	err := g.notifier.SendText(fmt.Sprintf("🟢 <b>GOrimpo %s</b> iniciado e pronto para garimpar!", version), "system")
 	if err != nil {
-		panic(fmt.Sprintf("error sending message to telegram: %v", err))
+		panic(fmt.Sprintf("Error sending Notification message : %v", err))
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
