@@ -20,9 +20,30 @@ type ScraperSettings struct {
 	UserAgentCount int `yaml:"user_agent_count"`
 }
 
+type Proxy struct {
+	Enabled    bool            `yaml:"enabled"`
+	Provider   string          `yaml:"provider"`
+	Strategies ProxyStrategies `yaml:"strategies"`
+}
+
+type ProxyStrategies struct {
+	Proxyscrape Proxyscrape `yaml:"proxyscrape"`
+}
+
+type Proxyscrape struct {
+	URL              string  `yaml:"url"`
+	Timeout          int     `yaml:"timeout"`
+	RefreshThreshold float64 `yaml:"refresh_threshold"`
+}
+
+type FixedProxy struct {
+	URL string `yaml:"url"`
+}
+
 type Config struct {
 	App        AppSettings     `yaml:"app"`
 	Scraper    ScraperSettings `yaml:"scraper"`
+	Proxy      Proxy           `yaml:"proxy"`
 	Categories []string        `yaml:"categories"`
 	Searches   []Search        `yaml:"searches"`
 }

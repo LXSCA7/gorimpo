@@ -19,14 +19,18 @@ type OLXAdapter struct {
 	isHeadless     bool
 	config         ports.ConfigProvider
 	identityGen    ports.IdentityGenerator
+	proxy          ports.ProxyProvider
 	lastScreenshot []byte
+	proxySessions  map[string]domain.UserAgent
 }
 
-func NewOLX(isHeadless bool, cfg ports.ConfigProvider, idGen ports.IdentityGenerator) *OLXAdapter {
+func NewOLX(isHeadless bool, cfg ports.ConfigProvider, idGen ports.IdentityGenerator, proxy ports.ProxyProvider) *OLXAdapter {
 	return &OLXAdapter{
-		isHeadless:  isHeadless,
-		config:      cfg,
-		identityGen: idGen,
+		isHeadless:    isHeadless,
+		config:        cfg,
+		identityGen:   idGen,
+		proxy:         proxy,
+		proxySessions: make(map[string]domain.UserAgent),
 	}
 }
 
@@ -44,24 +48,12 @@ func parsePrice(p string) float64 {
 func (o *OLXAdapter) Search(term string) ([]domain.Offer, error) {
 	scraperCfg := o.config.Get().Scraper
 	o.applyJitter(scraperCfg)
-	userAgent := o.getUserAgent()
-	page, cleanup, err := o.setupBrowser(userAgent)
+
+	page, cleanup, err := o.accessOLX(term)
 	if err != nil {
 		return nil, err
 	}
 	defer cleanup()
-
-	buscaStr := url.QueryEscape(term)
-	targetURL := fmt.Sprintf("https://www.olx.com.br/brasil?q=%s&sf=1", buscaStr)
-
-	slog.Info(fmt.Sprintf("🕵️  Acessando a OLX: %s\n", targetURL))
-
-	if _, err = page.Goto(targetURL, playwright.PageGotoOptions{
-		WaitUntil: playwright.WaitUntilStateDomcontentloaded,
-		Timeout:   playwright.Float(30000),
-	}); err != nil {
-		return nil, err
-	}
 
 	slog.Info("⏳ Esperando a OLX renderizar as ofertas...")
 	time.Sleep(2 * time.Second)
@@ -156,11 +148,6 @@ func (o *OLXAdapter) saveLastScreenshot(page playwright.Page) {
 	o.lastScreenshot = img
 }
 
-func (o *OLXAdapter) getUserAgent() domain.UserAgent {
-	userAgent := o.identityGen.GetRandom()
-	return userAgent
-}
-
 func (o *OLXAdapter) applyJitter(scraperCfg domain.ScraperSettings) {
 	if scraperCfg.MaxJitter > 0 {
 		jitter := rand.IntN(scraperCfg.MaxJitter-scraperCfg.MinJitter+1) + scraperCfg.MinJitter
@@ -170,7 +157,60 @@ func (o *OLXAdapter) applyJitter(scraperCfg domain.ScraperSettings) {
 
 }
 
-func (o *OLXAdapter) setupBrowser(userAgent domain.UserAgent) (playwright.Page, func(), error) {
+func (o *OLXAdapter) accessOLX(term string) (playwright.Page, func(), error) {
+	max := 50
+	if o.proxy == nil {
+		max = 1
+	}
+
+	for range max {
+		var proxyURL string
+		if o.proxy != nil {
+			proxyURL, _ = o.proxy.GetProxy()
+		}
+
+		userAgent := o.getStickyIdentity(proxyURL)
+
+		page, cleanup, err := o.setupBrowser(userAgent, proxyURL)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		buscaStr := url.QueryEscape(term)
+		targetURL := fmt.Sprintf("https://www.olx.com.br/brasil?q=%s&sf=1", buscaStr)
+
+		slog.Info(fmt.Sprintf("🕵️  Acessando a OLX: %s\n", targetURL))
+
+		if _, err = page.Goto(targetURL, playwright.PageGotoOptions{
+			WaitUntil: playwright.WaitUntilStateDomcontentloaded,
+			Timeout:   playwright.Float(30000),
+		}); err != nil {
+			page.Close()
+			o.proxy.MarkInvalid(proxyURL)
+			cleanup()
+			continue
+		}
+
+		return page, cleanup, nil
+	}
+	return nil, nil, fmt.Errorf("max attempts.")
+}
+
+func (o *OLXAdapter) getStickyIdentity(proxyURL string) domain.UserAgent {
+	if proxyURL == "" {
+		return o.identityGen.GetRandom()
+	}
+
+	if ua, ok := o.proxySessions[proxyURL]; ok {
+		return ua
+	}
+
+	newUA := o.identityGen.GetRandom()
+	o.proxySessions[proxyURL] = newUA
+	return newUA
+}
+
+func (o *OLXAdapter) setupBrowser(userAgent domain.UserAgent, proxyURL string) (playwright.Page, func(), error) {
 	pw, err := playwright.Run(&playwright.RunOptions{})
 
 	if err != nil {
@@ -180,6 +220,13 @@ func (o *OLXAdapter) setupBrowser(userAgent domain.UserAgent) (playwright.Page, 
 	var browser playwright.Browser
 	launchOptions := playwright.BrowserTypeLaunchOptions{
 		Headless: playwright.Bool(o.isHeadless),
+	}
+
+	if proxyURL != "" {
+		slog.Debug("🌐 Configurando proxy no navegador", "proxy", proxyURL)
+		launchOptions.Proxy = &playwright.Proxy{
+			Server: proxyURL,
+		}
 	}
 
 	switch userAgent.Browser {
