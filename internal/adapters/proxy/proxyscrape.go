@@ -3,6 +3,7 @@ package proxy
 import (
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"strings"
 	"sync"
@@ -43,6 +44,7 @@ func (h *ProxyscrapeAdapter) GetProxy() (string, error) {
 		h.pool = h.pool[1:]
 
 		if p.IsValid {
+			slog.Info("proxy selected", "proxy url", p.URL)
 			return p.URL, nil
 		}
 	}

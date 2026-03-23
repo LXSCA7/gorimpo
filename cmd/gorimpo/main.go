@@ -13,7 +13,7 @@ import (
 	"github.com/LXSCA7/gorimpo/internal/adapters/notifier"
 	"github.com/LXSCA7/gorimpo/internal/adapters/proxy"
 	"github.com/LXSCA7/gorimpo/internal/adapters/repository"
-	"github.com/LXSCA7/gorimpo/internal/adapters/scraper"
+	"github.com/LXSCA7/gorimpo/internal/adapters/scraper/olx"
 	"github.com/LXSCA7/gorimpo/internal/adapters/telemetry"
 	"github.com/LXSCA7/gorimpo/internal/core/ports"
 	"github.com/LXSCA7/gorimpo/internal/core/services"
@@ -84,7 +84,7 @@ func main() {
 	}
 
 	proxyProvider := proxy.NewProxyscrapeProvider(cfg.Get().Proxy.Strategies.Proxyscrape.URL)
-	olxScraper := scraper.NewOLX(Version != "dev", cfg, idGen, proxyProvider)
+	olxScraper := olx.NewAdapter(Version != "dev", cfg, idGen, proxyProvider)
 
 	cfg.OnReload = func(added, removed []string) {
 		msg := "🔥 <b>Hot Reload: Buscas Atualizadas!</b>\n\n"
