@@ -111,7 +111,7 @@ func (t *TelegramAdapter) SendPhoto(data []byte, caption string, category string
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("telegram error: %d", resp.StatusCode)
+		return fmt.Errorf("Telegram error: %d", resp.StatusCode)
 	}
 
 	return nil
@@ -134,28 +134,28 @@ func (t *TelegramAdapter) CreateCategory(name string) (string, error) {
 
 	body, err := json.Marshal(payload)
 	if err != nil {
-		return "", fmt.Errorf("erro ao montar json do novo tópico: %v", err)
+		return "", fmt.Errorf("Error marshalling JSON for new topic: %v", err)
 	}
 
 	resp, err := http.Post(apiURL, "application/json", bytes.NewBuffer(body))
 	if err != nil {
-		return "", fmt.Errorf("erro de rede ao bater no telegram: %v", err)
+		return "", fmt.Errorf("Network error while contacting Telegram: %v", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(resp.Body)
-		slog.Error("Erro ao criar tópico no Telegram", "status", resp.StatusCode, "motivo", string(bodyBytes))
-		return "", fmt.Errorf("telegram recusou criar tópico. Status: %d", resp.StatusCode)
+		slog.Error("Error creating topic on Telegram", "status", resp.StatusCode, "reason", string(bodyBytes))
+		return "", fmt.Errorf("Telegram refused to create topic. Status: %d", resp.StatusCode)
 	}
 
 	var result createTopicResponse
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return "", fmt.Errorf("erro ao decodificar a resposta do telegram: %v", err)
+		return "", fmt.Errorf("Error decoding Telegram response: %v", err)
 	}
 
 	if !result.Ok {
-		return "", fmt.Errorf("telegram retornou ok=false ao tentar criar o tópico")
+		return "", fmt.Errorf("Telegram returned ok=false when trying to create topic")
 	}
 
 	return strconv.Itoa(result.Result.MessageThreadID), nil
@@ -189,15 +189,15 @@ func (t *TelegramAdapter) doRequest(payload map[string]any) error {
 		if err := json.Unmarshal(bodyBytes, &telegramErr); err == nil && telegramErr.Parameters.RetryAfter > 0 {
 			sleepTime := telegramErr.Parameters.RetryAfter
 
-			slog.Warn("🚨 Telegram mandou a gente segurar (Erro 429).", "sleeping_seconds", sleepTime)
+			slog.Warn("🚨 Telegram asked us to wait (Error 429).", "sleeping_seconds", sleepTime)
 			time.Sleep(time.Duration(sleepTime) * time.Second)
 
 			return t.doRequest(payload)
 		}
 	}
 
-	slog.Error("Erro na API do Telegram", "status", resp.StatusCode, "motivo", string(bodyBytes))
-	return fmt.Errorf("erro na api do telegram: status %d - %s", resp.StatusCode, string(bodyBytes))
+	slog.Error("Error in Telegram API", "status", resp.StatusCode, "reason", string(bodyBytes))
+	return fmt.Errorf("Error in Telegram API: status %d - %s", resp.StatusCode, string(bodyBytes))
 }
 
 func formatTags(tags []string) string {

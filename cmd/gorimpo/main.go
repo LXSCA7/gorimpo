@@ -45,13 +45,13 @@ func main() {
 	_ = godotenv.Load()
 
 	if err := os.MkdirAll("data", os.ModePerm); err != nil {
-		slog.Error("Erro ao criar pasta data", "erro", err)
+		slog.Error("Error creating data directory", "error", err)
 		os.Exit(1)
 	}
 
 	cfg, err := config.NewConfigManager("./config.yaml")
 	if err != nil {
-		slog.Error("Erro ao carregar configurações", "erro", err)
+		slog.Error("Error loading configuration", "error", err)
 		os.Exit(1)
 	}
 
@@ -67,7 +67,7 @@ func main() {
 		host := strings.TrimSpace(os.Getenv("GOTIFY_HOST"))
 		token := strings.TrimSpace(os.Getenv("GOTIFY_TOKEN"))
 		if host == "" || token == "" {
-			slog.Error("Variáveis GOTIFY_HOST ou GOTIFY_TOKEN ausentes")
+			slog.Error("Missing GOTIFY_HOST or GOTIFY_TOKEN environment variables")
 			os.Exit(1)
 		}
 
@@ -76,7 +76,7 @@ func main() {
 		token := strings.TrimSpace(os.Getenv("TELEGRAM_TOKEN"))
 		chatID := strings.TrimSpace(os.Getenv("TELEGRAM_CHAT_ID"))
 		if token == "" || chatID == "" {
-			slog.Error("Variáveis TELEGRAM_TOKEN ou TELEGRAM_CHAT_ID ausentes")
+			slog.Error("Missing TELEGRAM_TOKEN or TELEGRAM_CHAT_ID environment variables")
 			os.Exit(1)
 		}
 
@@ -87,12 +87,12 @@ func main() {
 	olxScraper := olx.NewAdapter(Version != "dev", cfg, idGen, proxyProvider)
 
 	cfg.OnReload = func(added, removed []string) {
-		msg := "🔥 <b>Hot Reload: Buscas Atualizadas!</b>\n\n"
+		msg := "🔥 <b>Hot Reload: Updated search terms!</b>\n\n"
 		if len(added) > 0 {
-			msg += fmt.Sprintf("✅ <b>Adicionadas:</b> %v\n", added)
+			msg += fmt.Sprintf("✅  <b>Added:</b> %v\n", added)
 		}
 		if len(removed) > 0 {
-			msg += fmt.Sprintf("❌ <b>Removidas:</b> %v\n", removed)
+			msg += fmt.Sprintf("❌  <b>Removed:</b> %v\n", removed)
 		}
 
 		_ = appNotifier.SendText(msg, "system")
@@ -101,7 +101,7 @@ func main() {
 
 	repo, err := repository.NewSQLite("data/gorimpo.db")
 	if err != nil {
-		slog.Error("Erro ao iniciar o banco de dados", "erro", err)
+		slog.Error("Error initializing database", "error", err)
 		os.Exit(1)
 	}
 
@@ -111,7 +111,7 @@ func main() {
 	http.Handle("/metrics", promhttp.Handler())
 	metrics := telemetry.NewPrometheusMetrics()
 	go func() {
-		slog.Info("📈 Servidor de métricas rodando na porta :2112")
+		slog.Info("📈 Metrics server running on port :2112")
 		http.ListenAndServe(":2112", nil)
 	}()
 
@@ -119,5 +119,5 @@ func main() {
 	slog.Info("🚀 GOrimpo starting...", slog.String("version", Version))
 	gorimpoSvc.Start(Version)
 
-	slog.Info("👋 Sistema encerrado.")
+	slog.Info("👋 System shutting down.")
 }

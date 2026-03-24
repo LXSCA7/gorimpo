@@ -41,12 +41,12 @@ func (s *SystemService) checkVersion(currentVersion string) {
 	lastVersion := s.repo.GetLastVersion()
 
 	if lastVersion != "" && lastVersion != currentVersion {
-		slog.Info("🎉 Atualização detectada!", "old", lastVersion, "new", currentVersion)
+		slog.Info("🎉 Update detected!", "old", lastVersion, "new", currentVersion)
 
 		changelogMsg := fmt.Sprintf(
-			"🚀 <b>GOrimpo Atualizado com Sucesso!</b>\n\n"+
-				"De: <code>%s</code>\nPara: <code>%s</code>\n\n"+
-				"🔗 <a href=\"https://github.com/LXSCA7/gorimpo/releases\">Ver Changelog</a>",
+			"🚀 <b>GOrimpo Updated Successfully!</b>\n\n"+
+				"From: <code>%s</code>\nTo: <code>%s</code>\n\n"+
+				"🔗 <a href=\"https://github.com/LXSCA7/gorimpo/releases\">View Changelog</a>",
 			lastVersion, currentVersion,
 		)
 		_ = s.notifier.SendText(changelogMsg, "system")
@@ -62,7 +62,7 @@ func (s *SystemService) setupRoutes() (map[string]string, []string) {
 
 	useTelegramTopics := (strings.EqualFold(config.App.DefaultNotifier, "telegram") && (config.App.UseTopics != nil && *config.App.UseTopics))
 
-	slog.Info("🗺️ Configurando rotas de notificação por categoria...")
+	slog.Info("🗺️ Configuring notification routes by category...")
 
 	categories := []string{"system"}
 	categories = append(categories, config.Categories...)
@@ -74,11 +74,11 @@ func (s *SystemService) setupRoutes() (map[string]string, []string) {
 
 		destID := s.repo.GetRoute(category)
 		if destID == "" {
-			slog.Info("✨ Criando novo tópico no Telegram...", "categoria", category)
+			slog.Info("✨ Creating new topic on Telegram...", "category", category)
 
 			newID, err := s.notifier.CreateCategory(category)
 			if err != nil {
-				slog.Error("Erro ao criar tópico, jogando pro Geral", "erro", err)
+				slog.Error("Error creating topic, defaulting to General", "error", err)
 				newID = "0"
 			} else {
 				_ = s.repo.SaveRoute(category, newID)

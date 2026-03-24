@@ -50,7 +50,7 @@ func (o *Adapter) Search(term string) ([]domain.Offer, error) {
 
 	if err = o.waitForContent(page); err != nil {
 		o.saveLastScreenshot(page)
-		slog.Warn("⏳ Timeout ou bloqueio silencioso na OLX", "term", term, "proxy", o.currentProxy)
+		slog.Warn("⏳ OLX timed out", "term", term, "proxy", o.currentProxy)
 
 		o.proxy.MarkInvalid(o.currentProxy)
 		o.currentProxy = ""

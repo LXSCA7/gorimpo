@@ -65,7 +65,7 @@ func (g *GorimpoService) Start(version string) {
 			seconds := rand.IntN(60)
 			waitTime := time.Duration(minutes)*time.Minute + time.Duration(seconds)*time.Second
 
-			slog.Info("Aguardando próximo ciclo", "tempo_total", waitTime.String())
+			slog.Info("Waiting for next cycle", "total_time", waitTime.String())
 
 			select {
 			case <-ctx.Done():
@@ -81,7 +81,7 @@ func (g *GorimpoService) Start(version string) {
 
 	<-stopChan
 	slog.Warn("Graceful shutdown initiated...")
-	g.notifier.SendText("🔴 <b>GOrimpo</b> desligando. Fui!", "system")
+	g.notifier.SendText("🔴 <b>GOrimpo</b> shutting down. Bye!", "system")
 
 	cancel()
 	time.Sleep(2 * time.Second)
@@ -93,8 +93,9 @@ func (g *GorimpoService) runCycle() {
 	config := g.config.Get()
 	for _, search := range config.Searches {
 		if time.Now().Before(g.circuitOpenUntil) {
-			slog.Warn("🚧 Circuit Breaker ATIVADO. Pulando ciclo para evitar ban...",
-				"volto_em", time.Until(g.circuitOpenUntil).Round(time.Second))
+			slog.Warn("🚧 Circuit Breaker ACTIVATED. Skipping cycle to avoid ban...",
+
+				"back_in", time.Until(g.circuitOpenUntil).Round(time.Second))
 			return
 		}
 		g.processSearch(search)
@@ -104,7 +105,7 @@ func (g *GorimpoService) runCycle() {
 	g.cycleCount++
 	if g.cycleCount >= 50 {
 		minutes := 5 + rand.IntN(4)
-		slog.Info("♻️  Reciclagem atingida.", "descanso_minutos", minutes)
+		slog.Info("♻️  Recycling reached.", "rest_minutes", minutes)
 
 		g.cycleCount = 0
 		time.Sleep(time.Duration(minutes) * time.Minute)
@@ -132,12 +133,12 @@ func (g *GorimpoService) processSearch(search domain.Search) {
 			g.circuitOpenUntil = time.Now().Add(cooldown)
 			g.consecutiveErrors = 0
 
-			slog.Warn("🚧 Circuit Breaker ATIVADO. Aplicando descanso...",
-				"nivel", g.circuitBreakerCounter,
+			slog.Warn("🚧 Circuit Breaker ACTIVATED. Applying cooldown...",
+				"level", g.circuitBreakerCounter,
 				"circuit_breaker_cooldown", cooldown,
 			)
 
-			msg := fmt.Sprintf("🚧 <b>CIRCUIT BREAKER ATIVADO!</b>\n3 falhas seguidas. Entrando em cooldown de %v.", cooldown)
+			msg := fmt.Sprintf("🚧 <b>CIRCUIT BREAKER ACTIVATED!</b>\n3 consecutive failures. Entering cooldown of %v.", cooldown)
 			g.notifier.SendText(msg, "system")
 		}
 		return
@@ -157,7 +158,7 @@ func (g *GorimpoService) processSearch(search domain.Search) {
 	for _, offer := range rawOffers {
 		if offer.IsFeatured && !g.contains(offer.Title, search.Term) {
 			irrelevantFeatured++
-			slog.Debug("🚫 Ignorando destaque irrelevante", "title", offer.Title)
+			slog.Debug("Ignoring irrelevant featured", "title", offer.Title)
 			continue
 		}
 

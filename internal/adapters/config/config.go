@@ -64,7 +64,7 @@ func (c *ConfigManager) Watch() {
 func (c *ConfigManager) loadAndCompare(newModTime time.Time) {
 	newConfig, err := Load(c.filepath)
 	if err != nil {
-		slog.Error("Falha ao recarregar config via Hot Reload", "erro", err)
+		slog.Error("Error loading config via Hot Reload", "error", err)
 		return
 	}
 
