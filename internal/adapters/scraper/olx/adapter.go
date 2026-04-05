@@ -1,6 +1,9 @@
 package olx
 
 import (
+	"errors"
+	"log/slog"
+
 	"github.com/LXSCA7/gorimpo/internal/core/domain"
 	"github.com/LXSCA7/gorimpo/internal/core/ports"
 )
@@ -34,12 +37,25 @@ func (o *Adapter) Search(term string) ([]domain.Offer, error) {
 
 	page, cleanup, err := o.accessOLX(term)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, domain.ErrProxyFailure) {
+			slog.Warn("⚠️ proxy error")
+			o.currentProxy = ""
+			return nil, nil
+		} else {
+			slog.Error("error when accessing olx.", "err", err)
+			return nil, err
+		}
 	}
 	defer cleanup()
 
 	if err = o.waitForContent(page); err != nil {
-		return nil, err
+		o.saveLastScreenshot(page)
+		slog.Warn("⏳ Timeout ou bloqueio silencioso na OLX", "term", term, "proxy", o.currentProxy)
+
+		o.proxy.MarkInvalid(o.currentProxy)
+		o.currentProxy = ""
+
+		return nil, nil
 	}
 
 	rawOffers, err := o.evaluatePage(page)

@@ -178,7 +178,7 @@ func (o *OLXAdapter) accessOLX(term string) (playwright.Page, func(), error) {
 		buscaStr := url.QueryEscape(term)
 		targetURL := fmt.Sprintf("https://www.olx.com.br/brasil?q=%s&sf=1", buscaStr)
 
-		slog.Info(fmt.Sprintf("🕵️  Acessando a OLX: %s\n", targetURL))
+		slog.Info(fmt.Sprintf("🕵️  Acessando a OLX: %s", targetURL))
 
 		if _, err = page.Goto(targetURL, playwright.PageGotoOptions{
 			WaitUntil: playwright.WaitUntilStateDomcontentloaded,

@@ -43,7 +43,7 @@ func (o *Adapter) accessOLX(term string) (playwright.Page, func(), error) {
 		max = 1
 	}
 
-	for range max {
+	for i := range max {
 		var proxyURL string
 		if o.proxy != nil && o.currentProxy == "" {
 			proxyURL, _ = o.proxy.GetProxy()
@@ -64,7 +64,7 @@ func (o *Adapter) accessOLX(term string) (playwright.Page, func(), error) {
 		buscaStr := url.QueryEscape(term)
 		targetURL := fmt.Sprintf("https://www.olx.com.br/brasil?q=%s&sf=1", buscaStr)
 
-		slog.Info(fmt.Sprintf("🕵️  Acessando a OLX: %s\n", targetURL))
+		slog.Info(fmt.Sprintf("🕵️  Acessando a OLX: %s", targetURL))
 
 		if _, err = page.Goto(targetURL, playwright.PageGotoOptions{
 			WaitUntil: playwright.WaitUntilStateDomcontentloaded,
@@ -75,13 +75,14 @@ func (o *Adapter) accessOLX(term string) (playwright.Page, func(), error) {
 			o.proxy.MarkInvalid(proxyURL)
 			cleanup()
 			o.applyJitter(o.config.Get().Scraper)
+			slog.Warn("⚠️ Invalid proxy, trying again...", "current_attempt", i, "max_attempts", max)
 			continue
 		}
 
 		o.currentProxy = proxyURL
 		return page, cleanup, nil
 	}
-	return nil, nil, fmt.Errorf("max attempts.")
+	return nil, nil, domain.ErrProxyFailure
 }
 
 func (o *Adapter) evaluatePage(page playwright.Page) ([]jsOffer, error) {
@@ -102,10 +103,15 @@ func (o *Adapter) waitForContent(page playwright.Page) error {
 	slog.Info("⏳ Esperando renderização...")
 	time.Sleep(2 * time.Second)
 
-	return page.Locator("section.olx-adcard").First().WaitFor(playwright.LocatorWaitForOptions{
+	err := page.Locator("section.olx-adcard").First().WaitFor(playwright.LocatorWaitForOptions{
 		State:   playwright.WaitForSelectorStateAttached,
 		Timeout: playwright.Float(10000),
 	})
+
+	if err == nil {
+		return nil
+	}
+	return err
 }
 
 func (o *Adapter) setupBrowser(userAgent domain.UserAgent, proxyURL string) (playwright.Page, func(), error) {
