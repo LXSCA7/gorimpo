@@ -26,7 +26,7 @@ var Version = "dev"
 
 func setupLogger() {
 	var logger *slog.Logger
-	if Version == "dev" {
+	if Version == "dev" || Version == "dev-headless" {
 		logger = slog.New(tint.NewHandler(os.Stdout, &tint.Options{
 			Level:      slog.LevelDebug,
 			TimeFormat: time.TimeOnly,
