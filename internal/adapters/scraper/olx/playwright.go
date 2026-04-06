@@ -64,7 +64,7 @@ func (o *Adapter) accessOLX(term string) (playwright.Page, func(), error) {
 		buscaStr := url.QueryEscape(term)
 		targetURL := fmt.Sprintf("https://www.olx.com.br/brasil?q=%s&sf=1", buscaStr)
 
-		slog.Info(fmt.Sprintf("🕵️  Acessando a OLX: %s", targetURL))
+		slog.Info(fmt.Sprintf("🕵️ Connecting to OLX: %s\n", targetURL))
 
 		if _, err = page.Goto(targetURL, playwright.PageGotoOptions{
 			WaitUntil: playwright.WaitUntilStateDomcontentloaded,
@@ -88,7 +88,7 @@ func (o *Adapter) accessOLX(term string) (playwright.Page, func(), error) {
 func (o *Adapter) evaluatePage(page playwright.Page) ([]jsOffer, error) {
 	result, err := page.Locator("section.olx-adcard").EvaluateAll(olxScraperScript)
 	if err != nil {
-		return nil, fmt.Errorf("erro JS: %v", err)
+		return nil, fmt.Errorf("error JS: %v", err)
 	}
 
 	var items []jsOffer
@@ -100,7 +100,7 @@ func (o *Adapter) evaluatePage(page playwright.Page) ([]jsOffer, error) {
 }
 
 func (o *Adapter) waitForContent(page playwright.Page) error {
-	slog.Info("⏳ Esperando renderização...")
+	slog.Info("⏳ Waiting for OLX to render the offers...")
 	time.Sleep(2 * time.Second)
 
 	err := page.Locator("section.olx-adcard").First().WaitFor(playwright.LocatorWaitForOptions{
@@ -118,7 +118,7 @@ func (o *Adapter) setupBrowser(userAgent domain.UserAgent, proxyURL string) (pla
 	pw, err := playwright.Run(&playwright.RunOptions{})
 
 	if err != nil {
-		return nil, nil, fmt.Errorf("não foi possível iniciar o playwright: %v", err)
+		return nil, nil, fmt.Errorf("cannot launch playwright: %v", err)
 	}
 
 	var browser playwright.Browser
@@ -127,7 +127,7 @@ func (o *Adapter) setupBrowser(userAgent domain.UserAgent, proxyURL string) (pla
 	}
 
 	if proxyURL != "" {
-		slog.Debug("🌐 Configurando proxy no navegador", "proxy", proxyURL)
+		slog.Debug("🌐 Setting up browser proxy", "proxy", proxyURL)
 		launchOptions.Proxy = &playwright.Proxy{
 			Server: proxyURL,
 		}
@@ -148,7 +148,7 @@ func (o *Adapter) setupBrowser(userAgent domain.UserAgent, proxyURL string) (pla
 
 	if err != nil {
 		pw.Stop()
-		return nil, nil, fmt.Errorf("não foi possível lançar o browser: %v", err)
+		return nil, nil, fmt.Errorf("cannot launch browser: %v", err)
 	}
 
 	browserContext, err := browser.NewContext(playwright.BrowserNewContextOptions{
@@ -165,7 +165,7 @@ func (o *Adapter) setupBrowser(userAgent domain.UserAgent, proxyURL string) (pla
 	if err != nil {
 		pw.Stop()
 		browser.Close()
-		return nil, nil, fmt.Errorf("erro ao criar contexto do browser: %v", err)
+		return nil, nil, fmt.Errorf("error creating browser context: %v", err)
 	}
 
 	page, err := browserContext.NewPage()

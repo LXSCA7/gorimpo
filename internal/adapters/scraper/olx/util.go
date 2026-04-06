@@ -11,7 +11,7 @@ import (
 func (o *Adapter) applyJitter(scraperCfg domain.ScraperSettings) {
 	if scraperCfg.MaxJitter > 0 {
 		jitter := rand.IntN(scraperCfg.MaxJitter-scraperCfg.MinJitter+1) + scraperCfg.MinJitter
-		slog.Debug("⏱️  Aplicando Jitter", "segundos", jitter)
+		slog.Debug("⏱️  Applying Jitter", "seconds", jitter)
 		time.Sleep(time.Duration(jitter) * time.Second)
 	}
 
