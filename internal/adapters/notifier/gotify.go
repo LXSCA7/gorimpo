@@ -58,14 +58,14 @@ func (g *GotifyAdapter) Send(offer domain.Offer, category, searchTerm string, sh
 	var msg strings.Builder
 
 	if showSearchTerm {
-		fmt.Fprintf(&msg, "🔎 Busca: %s\n", searchTerm)
+		fmt.Fprintf(&msg, "🔎 Search: %s\n", searchTerm)
 	}
 
-	fmt.Fprintf(&msg, "🚨 Novo achado no %s\n", offer.Source)
+	fmt.Fprintf(&msg, "🚨 New find on %s\n", offer.Source)
 	fmt.Fprintf(&msg, "🎮 %s\n", offer.Title)
-	fmt.Fprintf(&msg, "💰 Preço: R$ %.2f\n", offer.Price)
+	fmt.Fprintf(&msg, "💰 Price: R$ %.2f\n", offer.Price)
 	if !offer.PostDate.IsZero() {
-		fmt.Fprintf(&msg, "🕗 Postado em: %s\n", formatDate(offer.PostDate))
+		fmt.Fprintf(&msg, "🕗 Posted on: %s\n", formatDate(offer.PostDate))
 	}
 	fmt.Fprintf(&msg, "🔗 %s", offer.Link)
 

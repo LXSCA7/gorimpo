@@ -93,13 +93,13 @@ func (c *ConfigManager) loadAndCompare(newModTime time.Time) {
 	}
 
 	if len(added) > 0 || len(removed) > 0 {
-		slog.Info("🔥 Hot Reload: Configuração de buscas alterada!", "adicionadas", added, "removidas", removed)
+		slog.Info("🔥 Hot Reload: Search configuration changed!", "added", added, "removed", removed)
 
 		if c.OnReload != nil {
 			c.OnReload(added, removed)
 		}
 	} else {
-		slog.Info("🔥 Hot Reload: Arquivo atualizado (Edição interna).")
+		slog.Info("🔥 Hot Reload: File updated (internal edit).")
 	}
 
 	c.config = newConfig
@@ -109,12 +109,12 @@ func (c *ConfigManager) loadAndCompare(newModTime time.Time) {
 func Load(filepath string) (*domain.Config, error) {
 	file, err := os.ReadFile(filepath)
 	if err != nil {
-		return nil, fmt.Errorf("erro ao ler o arquivo: %v", err)
+		return nil, fmt.Errorf("error reading file: %v", err)
 	}
 
 	var cfg domain.Config
 	if err := yaml.Unmarshal(file, &cfg); err != nil {
-		return nil, fmt.Errorf("erro no parse do yaml: %v", err)
+		return nil, fmt.Errorf("error parsing yaml: %v", err)
 	}
 
 	return &cfg, nil

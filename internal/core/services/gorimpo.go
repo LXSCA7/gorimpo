@@ -48,7 +48,7 @@ func (g *GorimpoService) Start(version string) {
 	if version == "dev" {
 		version = "vDEV"
 	}
-	err := g.notifier.SendText(fmt.Sprintf("🟢 <b>GOrimpo %s</b> iniciado e pronto para garimpar!", version), "system")
+	err := g.notifier.SendText(fmt.Sprintf("🟢 <b>GOrimpo %s</b> started and ready to search!", version), "system")
 	if err != nil {
 		panic(fmt.Sprintf("Error sending Notification message : %v", err))
 	}
@@ -122,7 +122,7 @@ func (g *GorimpoService) processSearch(search domain.Search) {
 
 		if visual, ok := g.scraper.(ports.VisualScraper); ok {
 			if img := visual.GetLastScreenshot(); img != nil {
-				g.notifier.SendPhoto(img, "📸 Erro ao buscar: "+search.Term, "system")
+				g.notifier.SendPhoto(img, "📸 Error searching: "+search.Term, "system")
 			}
 		}
 
