@@ -17,12 +17,14 @@
 </div>
 
 ## Sumário
-1. [Sobre](#sobre)
-2. [Funcionalidades](#funcionalidades)
-3. [Tecnologia](#tecnologia)
-4. [Como rodar](#como-rodar)
-5. [Configurações](#configurações)
-6. [Roadmap](#roadmap)
+- [Sumário](#sumário)
+- [Sobre](#sobre)
+- [Funcionalidades](#funcionalidades)
+- [Tecnologia](#tecnologia)
+  - [Arquitetura](#arquitetura)
+- [Como rodar](#como-rodar)
+  - [Configurações](#configurações)
+- [Roadmap](#roadmap)
 
 ## Sobre
 O GOrimpo é uma solução de monitoramento contínuo para o mercado de itens usados e raridades. Ele automatiza a busca por termos específicos, processa filtros de preço e termos negativos, e notifica o usuário instantaneamente via Telegram. 
@@ -115,6 +117,15 @@ Toda a inteligência de busca é controlada via `config.yaml`. Exemplo:
 app:
   default_notifier: "telegram" # opções: gotify, telegram
   use_topics: true # define se o telegram vai utilizar topicos
+
+proxy:
+  enabled: true
+  provider: "proxyscrape"
+  strategies:
+    proxyscrape:
+      url: "proxyscrape_url"
+      timeout: 5
+      refresh_threshold: 0.5
 
 categories: 
   - "🍄 nintendo"

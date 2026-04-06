@@ -17,12 +17,14 @@
 </div>
 
 ## Table of Contents
-1. [About](#about)
-2. [Features](#features)
-3. [Technology](#technology)
-4. [How to Run](#how-to-run)
-5. [Configuration](#configuration)
-6. [Roadmap](#roadmap)
+- [Table of Contents](#table-of-contents)
+- [About](#about)
+- [Features](#features)
+- [Technology](#technology)
+  - [Architecture](#architecture)
+- [How to Run](#how-to-run)
+  - [Configuration](#configuration)
+- [Roadmap](#roadmap)
 
 ## About
 GOrimpo is a continuous monitoring solution designed for the second-hand market and collectibles. It automates searches for specific terms, processes price and negative filters, and instantly notifies the user via Telegram.
@@ -113,6 +115,15 @@ Search intelligence is entirely controlled via `config.yaml`. Example:
 app:
   default_notifier: "telegram" # options: gotify, telegram
   use_topics: true # define if telegram will use topics
+
+proxy:
+  enabled: true
+  provider: "proxyscrape"
+  strategies:
+    proxyscrape:
+      url: "proxyscrape_url"
+      timeout: 5
+      refresh_threshold: 0.5
 
 categories: 
   - "🍄 nintendo"
