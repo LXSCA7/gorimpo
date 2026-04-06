@@ -3,7 +3,10 @@
   <h1>GOrimpo</h1>
   <p><strong>A resilient scraper for real-time marketplace monitoring</strong></p>
 
-  ### 🇧🇷 For the README in Portuguese, click [here](./docs/languages/pt-br/README.md)
+  [English](./README.md) | [Português](./docs/languages/pt-br/README.md)
+  [Contributing](./CONTRIBUTING.md)
+
+---
 
   <p>
     <img src="https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white" alt="Go">
@@ -15,6 +18,8 @@
     <img src="https://img.shields.io/badge/License-Polyform_Non--Commercial-orange?style=for-the-badge" alt="License">
   </p>
 </div>
+
+---
 
 ## Table of Contents
 - [Table of Contents](#table-of-contents)
