@@ -28,7 +28,7 @@ func (s *SystemService) Setup(currentVersion string) map[string]string {
 	s.checkVersion(currentVersion)
 	if len(newTopics) > 0 {
 		var msg strings.Builder
-		msg.WriteString("<b>✨ Novos tópicos configurados:</b>\n")
+		msg.WriteString("<b>✨ New topics configured:</b>\n")
 		for _, cat := range newTopics {
 			fmt.Fprintf(&msg, "• <code>%s</code>\n", cat)
 		}

@@ -48,7 +48,7 @@ func (h *ProxyscrapeAdapter) GetProxy() (string, error) {
 			return p.URL, nil
 		}
 	}
-	return "", fmt.Errorf("tanque vazio")
+	return "", fmt.Errorf("proxy pool exhausted")
 }
 
 func (h *ProxyscrapeAdapter) MarkInvalid(proxyURL string) {

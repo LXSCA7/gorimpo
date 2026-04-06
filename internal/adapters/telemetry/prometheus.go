@@ -6,7 +6,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
-// Garantindo em tempo de compilação que implementamos a interface
+// compile-time interface check
 var _ ports.Metrics = (*PrometheusMetrics)(nil)
 
 type PrometheusMetrics struct {
@@ -20,25 +20,25 @@ func NewPrometheusMetrics() *PrometheusMetrics {
 	return &PrometheusMetrics{
 		discarded: promauto.NewCounterVec(prometheus.CounterOpts{
 			Name: "gorimpo_discarded_total",
-			Help: "Total de ofertas descartadas por termo e motivo",
+			Help: "Total discarded offers by term and reason",
 		}, []string{"term", "reason"}),
 
 		valid: promauto.NewCounterVec(prometheus.CounterOpts{
 			Name: "gorimpo_valid_total",
-			Help: "Total de ofertas validas encontradas por termo",
+			Help: "Total valid offers found by term",
 		}, []string{"term"}),
 
 		scrapedTotal: promauto.NewCounterVec(
 			prometheus.CounterOpts{
 				Name: "gorimpo_scraped_total",
-				Help: "Total bruto de itens raspados da plataforma",
+				Help: "Total raw items scraped from the platform",
 			},
 			[]string{"term"}),
 
 		sentTotal: promauto.NewCounterVec(
 			prometheus.CounterOpts{
 				Name: "gorimpo_sent_total",
-				Help: "Total de ofertas enviadas com sucesso pro Telegram",
+				Help: "Total offers successfully sent to Telegram",
 			},
 			[]string{"term"}),
 	}

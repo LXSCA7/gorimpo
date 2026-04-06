@@ -33,7 +33,7 @@ func NewSQLite(dbPath string) (*SQLiteRepository, error) {
 	);`
 
 	if _, err := db.Exec(queryOffers); err != nil {
-		return nil, fmt.Errorf("erro ao criar tabela offers: %v", err)
+		return nil, fmt.Errorf("error creating offers table: %v", err)
 	}
 
 	createDiscardedTable := `
@@ -48,17 +48,17 @@ func NewSQLite(dbPath string) (*SQLiteRepository, error) {
 	);`
 
 	if _, err := db.Exec(createDiscardedTable); err != nil {
-		return nil, fmt.Errorf("erro ao criar tabela discarded_offers: %v", err)
+		return nil, fmt.Errorf("error creating discarded_offers table: %v", err)
 	}
 
 	queryRoutes := `CREATE TABLE IF NOT EXISTS routes (category TEXT PRIMARY KEY, dest_id TEXT);`
 	if _, err := db.Exec(queryRoutes); err != nil {
-		return nil, fmt.Errorf("erro ao criar tabela routes: %v", err)
+		return nil, fmt.Errorf("error creating routes table: %v", err)
 	}
 
 	querySys := `CREATE TABLE IF NOT EXISTS system_info (key TEXT PRIMARY KEY, value TEXT);`
 	if _, err := db.Exec(querySys); err != nil {
-		return nil, fmt.Errorf("erro ao criar tabela system_info: %v", err)
+		return nil, fmt.Errorf("error creating system_info table: %v", err)
 	}
 
 	return &SQLiteRepository{db: db}, nil
@@ -91,13 +91,13 @@ func (r *SQLiteRepository) SaveDiscarded(offer domain.Offer, reason string) (boo
 		return false, err
 	}
 
-	// 👇 A mágica acontece aqui!
+	// check if row was actually inserted or ignored
 	rows, err := result.RowsAffected()
 	if err != nil {
 		return false, err
 	}
 
-	return rows > 0, nil // Retorna true se inseriu, false se ignorou
+	return rows > 0, nil
 }
 
 // system repo:
