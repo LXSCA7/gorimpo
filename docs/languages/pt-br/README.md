@@ -6,7 +6,7 @@
   ---
 
   [English](../../../README.md) | [Português](./README.md)
-  [Contributing](./CONTRIBUTING.md)
+  [Contributing](./CONTRIBUTING.md) | [Changelog](../../../CHANGELOG.md)
   
   ---
 
@@ -31,6 +31,7 @@
   - [Arquitetura](#arquitetura)
 - [Como rodar](#como-rodar)
   - [Configurações](#configurações)
+- [Contribuição](#contribuição)
 - [Roadmap](#roadmap)
 
 ## Sobre
@@ -152,6 +153,12 @@ searches:
     category: "games"
     exclude: ["caixa", "manuais", "defeito"]
 ```
+
+## Contribuição
+
+Contribuições são o que tornam a comunidade open-source um lugar incrível para aprender, inspirar e criar. Qualquer contribuição que você fizer será **muito bem-vinda**.
+
+Por favor, veja o nosso [Guia de Contribuição](./CONTRIBUTING.md) para mais detalhes sobre nossa arquitetura e fluxo de trabalho.
 
 ## Roadmap
 - [ ] Implementação de novos adaptadores para Enjoei, MercadoLivre e Shopee.

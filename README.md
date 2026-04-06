@@ -4,7 +4,7 @@
   <p><strong>A resilient scraper for real-time marketplace monitoring</strong></p>
 
   [English](./README.md) | [Português](./docs/languages/pt-br/README.md)
-  [Contributing](./CONTRIBUTING.md)
+  [Contributing](./CONTRIBUTING.md) | [Changelog](./CHANGELOG.md)
 
 ---
 
@@ -29,6 +29,7 @@
   - [Architecture](#architecture)
 - [How to Run](#how-to-run)
   - [Configuration](#configuration)
+- [Contributing](#contributing)
 - [Roadmap](#roadmap)
 
 ## About
@@ -148,6 +149,12 @@ searches:
     category: "nintendo"
     exclude: ["box", "manuals", "broken"]
 ```
+
+## Contributing
+
+Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+
+Please check our [Contributing Guide](./CONTRIBUTING.md) for more details on our architecture and workflow.
 
 ## Roadmap
 - [ ] Implementation of new adapters for Enjoei, MercadoLivre, and Shopee.
