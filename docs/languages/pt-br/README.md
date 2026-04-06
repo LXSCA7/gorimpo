@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="./gorimpo-logo.png" alt="GOrimpo Logo" width="200">
+  <img src="../../gorimpo-logo.png" alt="GOrimpo Logo" width="200">
   <h1>GOrimpo</h1>
   <p><strong>Um scraper resiliente para monitoramento de marketplaces em tempo real</strong></p>
 
