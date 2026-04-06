@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 - Initial planning for `gorimpo-docs` website.
 - Preparation for OLX Native API integration.
+- Full Localization: Standardized all system logs, error and internal notification strings, and Prometheus metrics to English (by @dipievil & @qorexdev).
 
 ---
 
