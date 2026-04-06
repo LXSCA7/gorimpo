@@ -11,8 +11,9 @@ import (
 	"github.com/LXSCA7/gorimpo/internal/adapters/config"
 	"github.com/LXSCA7/gorimpo/internal/adapters/infrastructure"
 	"github.com/LXSCA7/gorimpo/internal/adapters/notifier"
+	"github.com/LXSCA7/gorimpo/internal/adapters/proxy"
 	"github.com/LXSCA7/gorimpo/internal/adapters/repository"
-	"github.com/LXSCA7/gorimpo/internal/adapters/scraper"
+	"github.com/LXSCA7/gorimpo/internal/adapters/scraper/olx"
 	"github.com/LXSCA7/gorimpo/internal/adapters/telemetry"
 	"github.com/LXSCA7/gorimpo/internal/core/ports"
 	"github.com/LXSCA7/gorimpo/internal/core/services"
@@ -25,7 +26,7 @@ var Version = "dev"
 
 func setupLogger() {
 	var logger *slog.Logger
-	if Version == "dev" {
+	if Version == "dev" || Version == "dev-headless" {
 		logger = slog.New(tint.NewHandler(os.Stdout, &tint.Options{
 			Level:      slog.LevelDebug,
 			TimeFormat: time.TimeOnly,
@@ -82,7 +83,8 @@ func main() {
 		appNotifier = notifier.NewTelegram(token, chatID)
 	}
 
-	olxScraper := scraper.NewOLX(Version != "dev", cfg, idGen)
+	proxyProvider := proxy.NewProxyscrapeProvider(cfg.Get().Proxy.Strategies.Proxyscrape.URL)
+	olxScraper := olx.NewAdapter(Version != "dev", cfg, idGen, proxyProvider)
 
 	cfg.OnReload = func(added, removed []string) {
 		msg := "🔥 <b>Hot Reload: Buscas Atualizadas!</b>\n\n"

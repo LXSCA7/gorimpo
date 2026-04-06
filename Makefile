@@ -12,6 +12,9 @@ run: build
 	@echo "🚀 Rodando o GOrimpo localmente..."
 	./bin/gorimpo
 
+run-headless:
+	go run -ldflags "-X main.Version=dev-headless" ./cmd/gorimpo/main.go
+	
 
 docker-build:
 	@echo "🐳 Construindo imagem Docker (isso pode demorar por causa do Chromium)..."
