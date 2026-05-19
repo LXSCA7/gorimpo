@@ -62,6 +62,8 @@ func main() {
 		selectedNotifier = "telegram"
 	}
 
+	notificationTemplates := cfg.Get().Notifier.Templates
+
 	var appNotifier ports.Notifier
 	if selectedNotifier == "gotify" {
 		host := strings.TrimSpace(os.Getenv("GOTIFY_HOST"))
@@ -71,7 +73,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		appNotifier = notifier.NewGotify(host, token)
+		appNotifier = notifier.NewGotify(host, token, notificationTemplates)
 	} else {
 		token := strings.TrimSpace(os.Getenv("TELEGRAM_TOKEN"))
 		chatID := strings.TrimSpace(os.Getenv("TELEGRAM_CHAT_ID"))
@@ -80,7 +82,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		appNotifier = notifier.NewTelegram(token, chatID)
+		appNotifier = notifier.NewTelegram(token, chatID, notificationTemplates)
 	}
 
 	proxyProvider := proxy.NewProxyscrapeProvider(cfg.Get().Proxy.Strategies.Proxyscrape.URL)

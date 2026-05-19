@@ -28,6 +28,11 @@ type GorimpoService struct {
 	circuitBreakerCounter int
 }
 
+const (
+	defaultCircuitBreakerTemplate = "🚧 <b>CIRCUIT BREAKER ACTIVATED!</b>\n3 consecutive failures. Entering cooldown of {{.Cooldown}}."
+	defaultErrorTemplate          = "📸 Error searching: {{.SearchTerm}}"
+)
+
 func NewGorimpoService(
 	s ports.Scraper,
 	or ports.OfferRepository,
@@ -122,7 +127,14 @@ func (g *GorimpoService) processSearch(search domain.Search) {
 
 		if visual, ok := g.scraper.(ports.VisualScraper); ok {
 			if img := visual.GetLastScreenshot(); img != nil {
-				g.notifier.SendPhoto(img, "📸 Error searching: "+search.Term, "system")
+				g.notifier.SendPhoto(img, g.renderNotificationTemplate(
+					domain.NotificationTemplateError,
+					defaultErrorTemplate,
+					domain.NotificationTemplateData{
+						SearchTerm: search.Term,
+						Error:      err.Error(),
+					},
+				), "system")
 			}
 		}
 
@@ -138,7 +150,11 @@ func (g *GorimpoService) processSearch(search domain.Search) {
 				"circuit_breaker_cooldown", cooldown,
 			)
 
-			msg := fmt.Sprintf("🚧 <b>CIRCUIT BREAKER ACTIVATED!</b>\n3 consecutive failures. Entering cooldown of %v.", cooldown)
+			msg := g.renderNotificationTemplate(
+				domain.NotificationTemplateCircuitBreaker,
+				defaultCircuitBreakerTemplate,
+				domain.NotificationTemplateData{Cooldown: cooldown.String()},
+			)
 			g.notifier.SendText(msg, "system")
 		}
 		return
@@ -231,6 +247,30 @@ func (g *GorimpoService) processSearch(search domain.Search) {
 		)
 		time.Sleep(time.Duration(sleep) * time.Second)
 	}
+}
+
+func (g *GorimpoService) renderNotificationTemplate(
+	name string,
+	defaultTemplate string,
+	data domain.NotificationTemplateData,
+) string {
+	msg, err := domain.RenderNotificationTemplate(
+		g.config.Get().Notifier.Templates.Template(name),
+		defaultTemplate,
+		data,
+	)
+	if err != nil {
+		slog.Error("Error rendering notification template", "template", name, "error", err)
+
+		fallback, fallbackErr := domain.RenderNotificationTemplate("", defaultTemplate, data)
+		if fallbackErr == nil {
+			return fallback
+		}
+
+		return defaultTemplate
+	}
+
+	return msg
 }
 
 func isExcluded(title string, excludes []string) bool {
