@@ -208,7 +208,7 @@ func formatTags(tags []string) string {
 }
 
 func formatDate(t time.Time) string {
-	now := time.Now()
+	now := time.Now().In(t.Location())
 	hour := t.Format("15:04")
 
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
