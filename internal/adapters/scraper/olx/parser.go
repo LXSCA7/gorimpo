@@ -1,6 +1,7 @@
 package olx
 
 import (
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -18,6 +19,11 @@ type jsOffer struct {
 	PostDate   string   `json:"postDate"`
 }
 
+var (
+	olxPostTimeRE = regexp.MustCompile(`\b([01]?\d|2[0-3]):([0-5]\d)\b`)
+	olxLocation   = loadOLXLocation()
+)
+
 func parsePrice(p string) float64 {
 	p = strings.ReplaceAll(p, "R$", "")
 	p = strings.ReplaceAll(p, ".", "")
@@ -28,43 +34,99 @@ func parsePrice(p string) float64 {
 }
 
 func parseOLXDate(dateStr string) time.Time {
-	now := time.Now()
-	cleanStr := strings.ReplaceAll(strings.ToLower(dateStr), ",", "")
+	return parseOLXDateAt(dateStr, time.Now())
+}
 
-	parts := strings.Split(strings.ToLower(dateStr), ", ")
-	timePart := "00:00"
-	if len(parts) > 1 {
-		timePart = parts[1]
+func parseOLXDateAt(dateStr string, now time.Time) time.Time {
+	if strings.TrimSpace(dateStr) == "" {
+		return now.In(olxLocation)
 	}
 
-	t, _ := time.Parse("15:04", timePart)
+	now = now.In(olxLocation)
+	cleanStr := normalizeOLXDate(dateStr)
+	hour, minute := parseOLXTime(cleanStr)
 
-	if strings.Contains(dateStr, "hoje") {
-		return time.Date(now.Year(), now.Month(), now.Day(), t.Hour(), t.Minute(), 0, 0, now.Location())
+	if strings.Contains(cleanStr, "hoje") {
+		return time.Date(now.Year(), now.Month(), now.Day(), hour, minute, 0, 0, olxLocation)
 	}
 
-	if strings.Contains(dateStr, "ontem") {
+	if strings.Contains(cleanStr, "ontem") {
 		yesterday := now.AddDate(0, 0, -1)
-		return time.Date(yesterday.Year(), yesterday.Month(), yesterday.Day(), t.Hour(), t.Minute(), 0, 0, now.Location())
+		return time.Date(yesterday.Year(), yesterday.Month(), yesterday.Day(), hour, minute, 0, 0, olxLocation)
 	}
 
 	months := map[string]time.Month{
-		"jan": time.January, "fev": time.February, "mar": time.March,
-		"abr": time.April, "mai": time.May, "jun": time.June,
-		"jul": time.July, "ago": time.August, "set": time.September,
-		"out": time.October, "nov": time.November, "dez": time.December,
+		"jan": time.January, "janeiro": time.January,
+		"fev": time.February, "fevereiro": time.February,
+		"mar": time.March, "marco": time.March, "março": time.March,
+		"abr": time.April, "abril": time.April,
+		"mai": time.May, "maio": time.May,
+		"jun": time.June, "junho": time.June,
+		"jul": time.July, "julho": time.July,
+		"ago": time.August, "agosto": time.August,
+		"set": time.September, "setembro": time.September,
+		"out": time.October, "outubro": time.October,
+		"nov": time.November, "novembro": time.November,
+		"dez": time.December, "dezembro": time.December,
 	}
 
 	fields := strings.Fields(cleanStr)
-	if len(fields) >= 3 {
-		dia, _ := strconv.Atoi(fields[0])
-		mesStr := fields[2]
-		if mes, ok := months[mesStr]; ok {
-			return time.Date(now.Year(), mes, dia, t.Hour(), t.Minute(), 0, 0, now.Location())
+	for i, field := range fields {
+		day, err := strconv.Atoi(field)
+		if err != nil || day < 1 || day > 31 || i+1 >= len(fields) {
+			continue
 		}
+		month, ok := months[fields[i+1]]
+		if !ok {
+			continue
+		}
+		year := now.Year()
+		if i+2 < len(fields) {
+			if parsedYear, err := strconv.Atoi(fields[i+2]); err == nil && parsedYear >= 2000 {
+				year = parsedYear
+			}
+		}
+		parsed := time.Date(year, month, day, hour, minute, 0, 0, olxLocation)
+		if parsed.After(now.Add(24 * time.Hour)) {
+			parsed = parsed.AddDate(-1, 0, 0)
+		}
+		return parsed
 	}
 
 	return now
+}
+
+func normalizeOLXDate(dateStr string) string {
+	replacer := strings.NewReplacer(
+		",", " ",
+		".", " ",
+		"postado em", " ",
+		"publicado em", " ",
+		"às", " ",
+		" as ", " ",
+		" de ", " ",
+	)
+	clean := strings.ToLower(strings.TrimSpace(dateStr))
+	clean = replacer.Replace(clean)
+	return strings.Join(strings.Fields(clean), " ")
+}
+
+func parseOLXTime(cleanStr string) (int, int) {
+	match := olxPostTimeRE.FindStringSubmatch(cleanStr)
+	if len(match) != 3 {
+		return 0, 0
+	}
+	hour, _ := strconv.Atoi(match[1])
+	minute, _ := strconv.Atoi(match[2])
+	return hour, minute
+}
+
+func loadOLXLocation() *time.Location {
+	loc, err := time.LoadLocation("America/Sao_Paulo")
+	if err != nil {
+		return time.FixedZone("America/Sao_Paulo", -3*60*60)
+	}
+	return loc
 }
 
 func (o *Adapter) mapToDomain(items []jsOffer) []domain.Offer {
