@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Initial planning for `gorimpo-docs` website.
 - Preparation for OLX Native API integration.
 - Full Localization: Standardized all system logs, error and internal notification strings, and Prometheus metrics to English (by @dipievil & @qorexdev).
+- Messages Templates: Added configurable bot message templates (by @jasperdevs).
+- Post dates: Fixed post dates in source timezone (by @jasperdevs).
 
 ---
 
