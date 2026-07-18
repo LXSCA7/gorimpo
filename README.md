@@ -122,6 +122,12 @@ app:
   default_notifier: "telegram" # options: gotify, telegram
   use_topics: true # define if telegram will use topics
 
+notifier:
+  templates:
+    new_offer: "💎 <b>New offer found!</b>\n\n📌 {{.Title}}\n💰 {{.Price}}\n\n🔗 {{.Link}}"
+    circuit_breaker: "🚧 <b>CIRCUIT BREAKER!</b>\nSystem is cooling down for {{.Cooldown}}."
+    error: "❌ <b>Scraper Error:</b> {{.Error}}"
+
 proxy:
   enabled: true
   provider: "proxyscrape"

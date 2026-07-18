@@ -19,17 +19,28 @@ import (
 var _ ports.Notifier = (*TelegramAdapter)(nil)
 
 type TelegramAdapter struct {
-	Token  string
-	ChatID string
-	ApiURL string
-	Routes map[string]string
+	Token     string
+	ChatID    string
+	ApiURL    string
+	Routes    map[string]string
+	Templates domain.NotificationTemplates
 }
 
-func NewTelegram(token, chatID string) *TelegramAdapter {
+const defaultTelegramNewOfferTemplate = `{{if .SearchTerm}}🔍 <i>Search: {{.SearchTerm}}</i>
+{{end}}🚨 <b>NEW FIND ON {{.Source}}!</b>
+
+🎮 <b>{{.Title}}</b>
+💰 Price: <b>{{.Price}}</b>{{.Tags}}
+🕗 Posted on: <b>{{.Date}}</b>
+
+🔗 <a href="{{.Link}}">View Listing</a>`
+
+func NewTelegram(token, chatID string, templates ...domain.NotificationTemplates) *TelegramAdapter {
 	return &TelegramAdapter{
-		Token:  token,
-		ChatID: chatID,
-		ApiURL: fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", token),
+		Token:     token,
+		ChatID:    chatID,
+		ApiURL:    fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", token),
+		Templates: firstTemplateConfig(templates),
 	}
 }
 
@@ -54,23 +65,32 @@ func (t *TelegramAdapter) SendText(message, category string) error {
 }
 
 func (t *TelegramAdapter) Send(offer domain.Offer, category, searchTerm string, showSearchTerm bool) error {
-	header := "🚨 <b>NEW FIND ON " + offer.Source + "!</b>"
-	if showSearchTerm {
-		header = fmt.Sprintf("🔍 <i>Search: %s</i>\n%s", searchTerm, header)
+	msg, err := t.formatOfferMessage(offer, searchTerm, showSearchTerm)
+	if err != nil {
+		return err
 	}
 
-	tagsStr := formatTags(offer.Tags)
-	msg := fmt.Sprintf(
-		"%s\n\n🎮 <b>%s</b>\n💰 Price: <b>R$ %.2f</b>%s\n🕗 Posted on: <b>%s</b>\n\n🔗 <a href=\"%s\">View Listing</a>",
-		header,
-		offer.Title,
-		offer.Price,
-		tagsStr,
-		formatDate(offer.PostDate),
-		offer.Link,
-	)
-
 	return t.SendText(msg, category)
+}
+
+func (t *TelegramAdapter) formatOfferMessage(offer domain.Offer, searchTerm string, showSearchTerm bool) (string, error) {
+	if !showSearchTerm {
+		searchTerm = ""
+	}
+
+	return domain.RenderNotificationTemplate(
+		t.Templates.Template(domain.NotificationTemplateNewOffer),
+		defaultTelegramNewOfferTemplate,
+		domain.NotificationTemplateData{
+			Title:      offer.Title,
+			Price:      fmt.Sprintf("R$ %.2f", offer.Price),
+			Link:       offer.Link,
+			Date:       formatDate(offer.PostDate),
+			Source:     offer.Source,
+			SearchTerm: searchTerm,
+			Tags:       formatTags(offer.Tags),
+		},
+	)
 }
 
 func (t *TelegramAdapter) SendPhoto(data []byte, caption string, category string) error {

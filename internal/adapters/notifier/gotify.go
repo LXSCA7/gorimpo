@@ -16,22 +16,31 @@ import (
 var _ ports.Notifier = (*GotifyAdapter)(nil)
 
 type GotifyAdapter struct {
-	host   string
-	token  string
-	apiURL string
-	client *http.Client
-	routes map[string]string
+	host      string
+	token     string
+	apiURL    string
+	client    *http.Client
+	routes    map[string]string
+	templates domain.NotificationTemplates
 }
 
-func NewGotify(host, token string) *GotifyAdapter {
+const defaultGotifyNewOfferTemplate = `{{if .SearchTerm}}🔎 Search: {{.SearchTerm}}
+{{end}}🚨 New find on {{.Source}}
+🎮 {{.Title}}
+💰 Price: {{.Price}}
+{{if .Date}}🕗 Posted on: {{.Date}}
+{{end}}🔗 {{.Link}}`
+
+func NewGotify(host, token string, templates ...domain.NotificationTemplates) *GotifyAdapter {
 	normalizedHost := strings.TrimRight(strings.TrimSpace(host), "/")
 
 	return &GotifyAdapter{
-		host:   normalizedHost,
-		token:  strings.TrimSpace(token),
-		apiURL: fmt.Sprintf("%s/message?token=%s", normalizedHost, strings.TrimSpace(token)),
-		client: &http.Client{Timeout: 10 * time.Second},
-		routes: make(map[string]string),
+		host:      normalizedHost,
+		token:     strings.TrimSpace(token),
+		apiURL:    fmt.Sprintf("%s/message?token=%s", normalizedHost, strings.TrimSpace(token)),
+		client:    &http.Client{Timeout: 10 * time.Second},
+		routes:    make(map[string]string),
+		templates: firstTemplateConfig(templates),
 	}
 }
 
@@ -55,21 +64,36 @@ func (g *GotifyAdapter) SendText(message, category string) error {
 }
 
 func (g *GotifyAdapter) Send(offer domain.Offer, category, searchTerm string, showSearchTerm bool) error {
-	var msg strings.Builder
-
-	if showSearchTerm {
-		fmt.Fprintf(&msg, "🔎 Search: %s\n", searchTerm)
+	msg, err := g.formatOfferMessage(offer, searchTerm, showSearchTerm)
+	if err != nil {
+		return err
 	}
 
-	fmt.Fprintf(&msg, "🚨 New find on %s\n", offer.Source)
-	fmt.Fprintf(&msg, "🎮 %s\n", offer.Title)
-	fmt.Fprintf(&msg, "💰 Price: R$ %.2f\n", offer.Price)
+	return g.SendText(msg, category)
+}
+
+func (g *GotifyAdapter) formatOfferMessage(offer domain.Offer, searchTerm string, showSearchTerm bool) (string, error) {
+	if !showSearchTerm {
+		searchTerm = ""
+	}
+
+	date := ""
 	if !offer.PostDate.IsZero() {
-		fmt.Fprintf(&msg, "🕗 Posted on: %s\n", formatDate(offer.PostDate))
+		date = formatDate(offer.PostDate)
 	}
-	fmt.Fprintf(&msg, "🔗 %s", offer.Link)
 
-	return g.SendText(msg.String(), category)
+	return domain.RenderNotificationTemplate(
+		g.templates.Template(domain.NotificationTemplateNewOffer),
+		defaultGotifyNewOfferTemplate,
+		domain.NotificationTemplateData{
+			Title:      offer.Title,
+			Price:      fmt.Sprintf("R$ %.2f", offer.Price),
+			Link:       offer.Link,
+			Date:       date,
+			Source:     offer.Source,
+			SearchTerm: searchTerm,
+		},
+	)
 }
 
 func (g *GotifyAdapter) SendPhoto(data []byte, caption string, category string) error {
