@@ -7,7 +7,7 @@ RUN go mod download
 
 RUN CGO_ENABLED=0 GOOS=linux go build \
     -trimpath \
-    -o /bin/playwright-cli github.com/playwright-community/playwright-go/cmd/playwright
+    -o /bin/playwright-cli github.com/mxschmitt/playwright-go/cmd/playwright
 
 FROM ubuntu:jammy AS setup
 

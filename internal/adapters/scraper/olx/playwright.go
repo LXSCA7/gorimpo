@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/LXSCA7/gorimpo/internal/core/domain"
-	"github.com/playwright-community/playwright-go"
+	"github.com/mxschmitt/playwright-go"
 )
 
 const olxScraperScript = `elements => {
