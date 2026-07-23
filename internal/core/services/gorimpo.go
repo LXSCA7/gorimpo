@@ -103,7 +103,7 @@ func (g *GorimpoService) runCycle() {
 				"back_in", time.Until(g.circuitOpenUntil).Round(time.Second))
 			return
 		}
-		g.processSearch(search)
+		g.processSearch(search, config.Proxy.Enabled)
 		time.Sleep(2 * time.Second)
 	}
 
@@ -117,7 +117,7 @@ func (g *GorimpoService) runCycle() {
 	}
 }
 
-func (g *GorimpoService) processSearch(search domain.Search) {
+func (g *GorimpoService) processSearch(search domain.Search, proxyEnabled bool) {
 	slog.Debug("🔎 Searching...", "term", search.Term)
 
 	rawOffers, err := g.scraper.Search(search.Term)
@@ -138,7 +138,7 @@ func (g *GorimpoService) processSearch(search domain.Search) {
 			}
 		}
 
-		if g.consecutiveErrors >= 3 {
+		if g.consecutiveErrors >= 3 && !proxyEnabled {
 			cooldown := time.Duration((15 + 10*g.circuitBreakerCounter)) * time.Minute
 
 			g.circuitBreakerCounter++
