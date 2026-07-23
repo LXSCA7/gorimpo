@@ -10,7 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [v1.3.0-beta.1] - 2026-07-18
+## [v1.3.0] - 2026-07-22
 ### 🚀 Added
 - **Messages Templates:** Configurable bot message templates (by @jasperdevs).
 - **Full Localization:** Standardized all system logs, error/internal notification strings, and Prometheus metrics to English (by @dipievil & @qorexdev).
